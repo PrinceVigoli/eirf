@@ -9,3 +9,15 @@
 export const INCIDENT_TYPES = ["Crime", "Accident", "Dispute", "Missing Person", "Other"] as const;
 
 export type IncidentType = (typeof INCIDENT_TYPES)[number];
+
+// Groups INCIDENT_TYPES into the two top-level categories used for
+// crime-statistics reporting and filtering. "Crime" is its own category;
+// everything else is "Non-Crime".
+export const INCIDENT_TYPE_GROUPS: { label: string; types: IncidentType[] }[] = [
+  { label: "Crime", types: ["Crime"] },
+  { label: "Non-Crime", types: ["Accident", "Dispute", "Missing Person", "Other"] },
+];
+
+export function categoryForType(type: IncidentType): "crime" | "non_crime" {
+  return type === "Crime" ? "crime" : "non_crime";
+}

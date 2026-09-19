@@ -26,7 +26,7 @@ const schema = z.object({
   witnessStatements: z.string().optional().nullable(),
   evidence: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
-  status: z.enum(['open', 'under_investigation', 'closed', 'archived']),
+  status: z.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']),
 });
 
 type FormData = z.infer<typeof schema>;

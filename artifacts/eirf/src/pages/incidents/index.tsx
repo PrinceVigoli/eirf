@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useListIncidents } from "@workspace/api-client-react";
+import type { IncidentStatus } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,16 +14,17 @@ import { Search, Plus, Filter } from "lucide-react";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { INCIDENT_TYPES } from "@/lib/incident-types";
 import type { IncidentType } from "@/lib/incident-types";
+import { getStatusColor, getStatusLabel } from "@/lib/incident-status";
 
 // Radix Select doesn't allow an empty-string item value, so "all" stands in
 // for "no filter" here and gets translated back to undefined below.
-const STATUS_OPTIONS = ["all", "open", "under_investigation", "closed", "archived"];
+const STATUS_OPTIONS = ["all", "open", "under_investigation", "settled", "closed", "archived"];
 const TYPE_OPTIONS = ["all", ...INCIDENT_TYPES];
 
 export default function IncidentList() {
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState<IncidentStatus | "">("");
   const [type, setType] = useState<IncidentType | "">("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -43,18 +45,6 @@ export default function IncidentList() {
     page,
     limit,
   });
-
-  const getStatusColor = (s: string): any => {
-    switch (s) {
-      case 'open': return "destructive";
-      case 'under_investigation': return "secondary";
-      case 'closed': return "outline";
-      case 'archived': return "outline";
-      default: return "default";
-    }
-  };
-
-  const getStatusLabel = (s: string) => s.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -84,7 +74,7 @@ export default function IncidentList() {
           </div>
           <Select
             value={status || "all"}
-            onValueChange={(v) => { setStatus(v === "all" ? "" : v); setPage(1); }}
+            onValueChange={(v) => { setStatus(v === "all" ? "" : v as IncidentStatus); setPage(1); }}
           >
             <SelectTrigger className="w-auto min-w-[10rem]"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -175,7 +165,7 @@ export default function IncidentList() {
                   </TableCell>
                   <TableCell>{incident.reportingOfficerName || "Unknown"}</TableCell>
                   <TableCell>
-                    <Badge variant={getStatusColor(incident.status)}>
+                    <Badge {...getStatusColor(incident.status)}>
                       {getStatusLabel(incident.status)}
                     </Badge>
                   </TableCell>
