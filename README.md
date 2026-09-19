@@ -3,8 +3,7 @@
 A local-first police incident-management app. Officers file and investigate incident
 reports, classify them as **Crime / Non-Crime**, track investigation status (including
 **Settled**), assign an **investigating officer**, and manage the **people involved** in
-each case — victims, complainants, suspects, witnesses — through a searchable **Persons
-registry**.
+each case — victims, complainants, suspects, witnesses — through a searchable **Name Index**.
 
 It runs entirely on a local machine against **PostgreSQL in Docker** — no hosted database
 and no internet connection required. This setup is intended for **local testing**.
@@ -39,12 +38,14 @@ Then open <http://localhost:5173> once the API (port 5000) and frontend windows 
 
 - **Incident records** — number, date of incident, date reported, time, location, description,
   evidence (narrative + file attachments with SHA-256 fingerprints), officer notes.
-- **Crime / Non-Crime classification** — incident types grouped into Crime and Non-Crime; a
+- **Crime / Non-Crime classification** — each incident is typed as **Crime** or **Non-Crime**; a
   server-derived category powers filtering and dashboards.
 - **Investigation status** — open → under investigation → settled → closed → archived, with a
   settled date, enforced by a status-transition graph.
 - **Investigating officer** — assign an investigator to a case (distinct from the reporting officer).
-- **Persons registry** — a searchable directory of everyone involved in cases (search by name,
+- **Officer profiles** — each officer has a profile page showing the cases they reported and are
+  investigating, with a self-service avatar and cover-photo upload.
+- **Name Index** — a searchable directory of everyone involved in cases (search by name,
   alias, or ID number; filter by role), with bio data and the list of cases each person is linked to.
 - **Dashboard** — incident stats and charts.
 - **Offline-capable** — a service worker queues writes and replays them on reconnect.
