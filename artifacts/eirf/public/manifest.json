@@ -1,0 +1,18 @@
+{
+  "name": "e-IRF: Electronic Incident Records Form",
+  "short_name": "e-IRF",
+  "description": "Luna Police Station — Electronic Incident Records Form",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

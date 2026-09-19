@@ -1,0 +1,857 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: e-IRF Electronic Incident Records Form API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication
+  - name: incidents
+    description: Incident records
+  - name: officers
+    description: Officer accounts
+  - name: dashboard
+    description: Dashboard statistics
+  - name: logs
+    description: System logs
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Officer"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me/password:
+    patch:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change own password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordBody"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Validation error or wrong current password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /incidents:
+    get:
+      operationId: listIncidents
+      tags: [incidents]
+      summary: List incidents
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            $ref: "#/components/schemas/IncidentType"
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/IncidentStatus"
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of incidents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentListResponse"
+    post:
+      operationId: createIncident
+      tags: [incidents]
+      summary: Create incident
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IncidentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+
+  /incidents/{id}:
+    get:
+      operationId: getIncident
+      tags: [incidents]
+      summary: Get incident by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Incident found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateIncident
+      tags: [incidents]
+      summary: Update incident
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IncidentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+    delete:
+      operationId: deleteIncident
+      tags: [incidents]
+      summary: Delete incident
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /officers:
+    get:
+      operationId: listOfficers
+      tags: [officers]
+      summary: List all officers
+      responses:
+        "200":
+          description: Officers list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Officer"
+    post:
+      operationId: createOfficer
+      tags: [officers]
+      summary: Create officer account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfficerInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Officer"
+
+  /officers/{id}:
+    get:
+      operationId: getOfficer
+      tags: [officers]
+      summary: Get officer by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Officer found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Officer"
+    patch:
+      operationId: updateOfficer
+      tags: [officers]
+      summary: Update officer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfficerUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Officer"
+    delete:
+      operationId: deleteOfficer
+      tags: [officers]
+      summary: Delete officer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/by-type:
+    get:
+      operationId: getIncidentsByType
+      tags: [dashboard]
+      summary: Incidents grouped by type
+      responses:
+        "200":
+          description: Type breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IncidentTypeCount"
+
+  /dashboard/by-month:
+    get:
+      operationId: getIncidentsByMonth
+      tags: [dashboard]
+      summary: Incidents grouped by month
+      responses:
+        "200":
+          description: Monthly breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IncidentMonthCount"
+
+  /dashboard/recent:
+    get:
+      operationId: getRecentIncidents
+      tags: [dashboard]
+      summary: Most recent incidents
+      responses:
+        "200":
+          description: Recent incidents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Incident"
+
+  /storage/uploads/request-url:
+    post:
+      tags: [storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadUrlRequest'
+      responses:
+        "200":
+          description: Presigned upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+
+  /incidents/{id}/evidence:
+    get:
+      tags: [incidents]
+      operationId: listEvidenceFiles
+      summary: List evidence files for an incident
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Evidence files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EvidenceFile'
+    post:
+      tags: [incidents]
+      operationId: addEvidenceFile
+      summary: Record an uploaded evidence file for an incident
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidenceFileInput'
+      responses:
+        "201":
+          description: Evidence file recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceFile'
+
+  /incidents/{id}/evidence/{fileId}:
+    delete:
+      tags: [incidents]
+      operationId: deleteEvidenceFile
+      summary: Remove an evidence file record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Evidence file removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /logs:
+    get:
+      operationId: listLogs
+      tags: [logs]
+      summary: List system logs
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Logs list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogListResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    LoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [officer]
+      properties:
+        officer:
+          $ref: "#/components/schemas/Officer"
+
+    OfficerRole:
+      type: string
+      enum: [admin, officer]
+
+    OfficerInputRole:
+      type: string
+      enum: [admin, officer]
+
+    OfficerUpdateRole:
+      type: string
+      enum: [admin, officer]
+
+    Officer:
+      type: object
+      required: [id, name, badgeNumber, rank, role, username, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        badgeNumber:
+          type: string
+        rank:
+          type: string
+        role:
+          $ref: "#/components/schemas/OfficerRole"
+        username:
+          type: string
+        createdAt:
+          type: string
+
+    OfficerInput:
+      type: object
+      required: [name, badgeNumber, rank, username, password, role]
+      properties:
+        name:
+          type: string
+        badgeNumber:
+          type: string
+        rank:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+        role:
+          $ref: "#/components/schemas/OfficerInputRole"
+
+    OfficerUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        badgeNumber:
+          type: string
+        rank:
+          type: string
+        username:
+          type: string
+        password:
+          type: ["string", "null"]
+        role:
+          $ref: "#/components/schemas/OfficerUpdateRole"
+
+    IncidentStatus:
+      type: string
+      enum: [open, under_investigation, closed, archived]
+
+    # Was previously a plain `string` on every incident schema below — any
+    # caller hitting the API directly (not just the UI's dropdown) could
+    # set an arbitrary value, silently fragmenting the "by type" dashboard
+    # breakdown and making the record unfindable via the type filter.
+    # See U4/B4 in the audit. Keep in sync with
+    # lib/db/src/schema/incidents.ts's incidentTypeEnum and
+    # artifacts/eirf/src/lib/incident-types.ts.
+    IncidentType:
+      type: string
+      enum: [Crime, Accident, Dispute, "Missing Person", Other]
+
+    Incident:
+      type: object
+      required: [id, incidentNumber, date, time, location, type, description, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        incidentNumber:
+          type: string
+        date:
+          type: string
+        time:
+          type: string
+        location:
+          type: string
+        type:
+          $ref: "#/components/schemas/IncidentType"
+        description:
+          type: string
+        status:
+          $ref: "#/components/schemas/IncidentStatus"
+        reportingOfficerId:
+          type: ["integer", "null"]
+        reportingOfficerName:
+          type: ["string", "null"]
+        witnessStatements:
+          type: ["string", "null"]
+        evidence:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    IncidentInput:
+      type: object
+      required: [date, time, location, type, description]
+      properties:
+        date:
+          type: string
+        time:
+          type: string
+        location:
+          type: string
+        type:
+          $ref: "#/components/schemas/IncidentType"
+        description:
+          type: string
+        witnessStatements:
+          type: string
+        evidence:
+          type: string
+        notes:
+          type: string
+        status:
+          $ref: "#/components/schemas/IncidentStatus"
+
+    IncidentUpdate:
+      type: object
+      properties:
+        date:
+          type: string
+        time:
+          type: string
+        location:
+          type: string
+        type:
+          $ref: "#/components/schemas/IncidentType"
+        description:
+          type: string
+        witnessStatements:
+          type: ["string", "null"]
+        evidence:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        status:
+          $ref: "#/components/schemas/IncidentStatus"
+
+    IncidentListResponse:
+      type: object
+      required: [incidents, total, page, limit]
+      properties:
+        incidents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Incident"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    DashboardStats:
+      type: object
+      required: [totalIncidents, incidentsThisMonth, incidentsThisWeek, openIncidents, closedIncidents, underInvestigation]
+      properties:
+        totalIncidents:
+          type: integer
+        incidentsThisMonth:
+          type: integer
+        incidentsThisWeek:
+          type: integer
+        openIncidents:
+          type: integer
+        closedIncidents:
+          type: integer
+        underInvestigation:
+          type: integer
+
+    IncidentTypeCount:
+      type: object
+      required: [type, count]
+      properties:
+        type:
+          $ref: "#/components/schemas/IncidentType"
+        count:
+          type: integer
+
+    IncidentMonthCount:
+      type: object
+      required: [month, count]
+      properties:
+        month:
+          type: string
+        count:
+          type: integer
+
+    SystemLog:
+      type: object
+      required: [id, action, details, officerName, createdAt]
+      properties:
+        id:
+          type: integer
+        action:
+          type: string
+        details:
+          type: string
+        officerId:
+          type: ["integer", "null"]
+        officerName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ChangePasswordBody:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+        contentType:
+          type: string
+
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/UploadUrlRequest'
+
+    EvidenceFile:
+      type: object
+      required: [id, incidentId, fileName, objectPath, contentType, uploadedById, createdAt]
+      properties:
+        id:
+          type: integer
+        incidentId:
+          type: integer
+        fileName:
+          type: string
+        objectPath:
+          type: string
+        contentType:
+          type: string
+        fileSize:
+          type: ["integer", "null"]
+        sha256:
+          type: ["string", "null"]
+          pattern: '^[a-f0-9]{64}$'
+          description: SHA-256 fingerprint calculated from the stored file bytes
+        uploadedById:
+          type: ["integer", "null"]
+        uploadedByName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    EvidenceFileInput:
+      type: object
+      required: [fileName, objectPath, contentType]
+      properties:
+        fileName:
+          type: string
+        objectPath:
+          type: string
+        contentType:
+          type: string
+        fileSize:
+          type: ["integer", "null"]
+
+    LogListResponse:
+      type: object
+      required: [logs, total, page, limit]
+      properties:
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/SystemLog"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
