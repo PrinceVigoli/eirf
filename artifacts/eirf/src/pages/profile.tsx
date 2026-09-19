@@ -287,8 +287,8 @@ export default function Profile() {
           </Button>
         </div>
         <CardContent className="pt-0">
-          <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12">
-            <div className="relative shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+            <div className="relative shrink-0 -mt-12">
               <div className="h-24 w-24 rounded-full ring-4 ring-card shadow-md bg-blue-600 text-white flex items-center justify-center text-3xl font-bold overflow-hidden">
                 {avatarSrc ? (
                   <img src={avatarSrc} alt={user?.name ?? "Avatar"} className="h-full w-full object-cover" />
