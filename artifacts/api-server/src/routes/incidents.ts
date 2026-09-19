@@ -1,11 +1,15 @@
 import { Router } from "express";
 import { db, incidentsTable, officersTable } from "@workspace/db";
 import { eq, ilike, and, gte, lte, or, desc, count } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { requireAuth, requireAdmin } from "../middlewares/requireAuth";
 import { CreateIncidentBody, UpdateIncidentBody, ListIncidentsQueryParams } from "@workspace/api-zod";
 import { logAction } from "../lib/logger-helper";
 import { paramString } from "../lib/params";
 import { isAllowedStatusTransition } from "../lib/incidentWorkflow";
+import { deriveCategory } from "../lib/incidentClassification";
+import { resolveSettledDate } from "../lib/settledDate";
+import { validateReportedDate } from "../lib/reportedDate";
 
 const router = Router();
 
@@ -30,13 +34,18 @@ function generateIncidentNumber(): string {
   return `IRF-${year}${month}${day}-${rand}`;
 }
 
-function formatIncident(r: typeof incidentsTable.$inferSelect & { reportingOfficerName?: string | null }) {
+function formatIncident(r: typeof incidentsTable.$inferSelect & { reportingOfficerName?: string | null; investigatingOfficerName?: string | null }) {
   return {
     ...r,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
   };
 }
+
+// Self-join alias: incidents references officers twice (reportingOfficerId,
+// investigatingOfficerId), so the investigating side needs its own aliased
+// table to join against without colliding with the reporting-officer join.
+const investigatingOfficer = alias(officersTable, "investigating_officer");
 
 const incidentSelect = {
   id: incidentsTable.id,
@@ -51,6 +60,11 @@ const incidentSelect = {
   witnessStatements: incidentsTable.witnessStatements,
   evidence: incidentsTable.evidence,
   notes: incidentsTable.notes,
+  dateReported: incidentsTable.dateReported,
+  investigatingOfficerId: incidentsTable.investigatingOfficerId,
+  investigatingOfficerName: investigatingOfficer.name,
+  category: incidentsTable.category,
+  settledDate: incidentsTable.settledDate,
   createdAt: incidentsTable.createdAt,
   updatedAt: incidentsTable.updatedAt,
   reportingOfficerName: officersTable.name,
@@ -80,6 +94,7 @@ router.get("/incidents", requireAuth, async (req, res): Promise<void> => {
   const [{ total }] = await db.select({ total: count() }).from(incidentsTable).where(where);
   const rows = await db.select(incidentSelect).from(incidentsTable)
     .leftJoin(officersTable, eq(incidentsTable.reportingOfficerId, officersTable.id))
+    .leftJoin(investigatingOfficer, eq(incidentsTable.investigatingOfficerId, investigatingOfficer.id))
     .where(where)
     .orderBy(desc(incidentsTable.createdAt))
     .limit(limit)
@@ -90,7 +105,24 @@ router.get("/incidents", requireAuth, async (req, res): Promise<void> => {
 router.post("/incidents", requireAuth, async (req, res): Promise<void> => {
   const parsed = CreateIncidentBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
-  const data = parsed.data;
+  // personsInvolved (person-linking) is handled by a later task — strip it
+  // here so it never reaches `.values()` below (it isn't an incidents column).
+  const { personsInvolved, ...data } = parsed.data;
+  const today = new Date().toISOString().slice(0, 10);
+
+  // category is always server-derived from type — never trust a client-sent
+  // value (there isn't one on this contract, but never read one either).
+  const category = deriveCategory(data.type);
+
+  if (data.dateReported !== undefined) {
+    const reportedCheck = validateReportedDate(data.dateReported, data.date, today);
+    if (!reportedCheck.ok) { res.status(400).json({ error: reportedCheck.error }); return; }
+  }
+  if (data.investigatingOfficerId !== undefined) {
+    const [investigator] = await db.select({ id: officersTable.id }).from(officersTable)
+      .where(eq(officersTable.id, data.investigatingOfficerId));
+    if (!investigator) { res.status(400).json({ error: "Investigating officer not found" }); return; }
+  }
 
   // incidentNumber has a `-####` random suffix, so on a busy day two
   // requests can collide. Retry with a fresh number a few times rather than
@@ -107,6 +139,10 @@ router.post("/incidents", requireAuth, async (req, res): Promise<void> => {
         incidentNumber,
         status: data.status ?? "open",
         reportingOfficerId: req.officer!.id,
+        category,
+        dateReported: data.dateReported ?? today,
+        investigatingOfficerId: data.investigatingOfficerId ?? null,
+        settledDate: resolveSettledDate(data.status ?? "open", null, today),
       }).returning();
       break;
     } catch (err: any) {
@@ -118,6 +154,7 @@ router.post("/incidents", requireAuth, async (req, res): Promise<void> => {
   await logAction(req.officer!.id, "CREATE_INCIDENT", `Created incident ${incidentNumber}`);
   const [row] = await db.select(incidentSelect).from(incidentsTable)
     .leftJoin(officersTable, eq(incidentsTable.reportingOfficerId, officersTable.id))
+    .leftJoin(investigatingOfficer, eq(incidentsTable.investigatingOfficerId, investigatingOfficer.id))
     .where(eq(incidentsTable.id, incident.id));
   res.status(201).json(formatIncident(row));
 });
@@ -125,6 +162,7 @@ router.post("/incidents", requireAuth, async (req, res): Promise<void> => {
 router.get("/incidents/export.csv", requireAuth, async (_req, res) => {
   const rows = await db.select(incidentSelect).from(incidentsTable)
     .leftJoin(officersTable, eq(incidentsTable.reportingOfficerId, officersTable.id))
+    .leftJoin(investigatingOfficer, eq(incidentsTable.investigatingOfficerId, investigatingOfficer.id))
     .orderBy(desc(incidentsTable.createdAt));
   const headers = ["Incident Number", "Date", "Time", "Location", "Type", "Status", "Reporting Officer", "Description", "Witness Statements", "Evidence Summary", "Notes"];
   const lines = rows.map((row) => [
@@ -141,6 +179,7 @@ router.get("/incidents/:id", requireAuth, async (req, res): Promise<void> => {
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const [row] = await db.select(incidentSelect).from(incidentsTable)
     .leftJoin(officersTable, eq(incidentsTable.reportingOfficerId, officersTable.id))
+    .leftJoin(investigatingOfficer, eq(incidentsTable.investigatingOfficerId, investigatingOfficer.id))
     .where(eq(incidentsTable.id, id));
   if (!row) { res.status(404).json({ error: "Incident not found" }); return; }
   res.json(formatIncident(row));
@@ -151,13 +190,17 @@ router.patch("/incidents/:id", requireAuth, async (req, res): Promise<void> => {
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const parsed = UpdateIncidentBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const data = parsed.data;
 
   // Previously any authenticated officer could edit any incident, with only
   // an audit-log entry (not a block) as a trace. Restrict edits to the
   // reporting officer or an admin, matching the "append-friendly,
   // delete-restricted" model DELETE already uses (requireAdmin below).
-  const [target] = await db.select({ reportingOfficerId: incidentsTable.reportingOfficerId, status: incidentsTable.status })
-    .from(incidentsTable).where(eq(incidentsTable.id, id));
+  const [target] = await db.select({
+    reportingOfficerId: incidentsTable.reportingOfficerId,
+    status: incidentsTable.status,
+    date: incidentsTable.date,
+  }).from(incidentsTable).where(eq(incidentsTable.id, id));
   if (!target) { res.status(404).json({ error: "Incident not found" }); return; }
   const isOwner = target.reportingOfficerId === req.officer!.id;
   const isAdmin = req.officer!.role === "admin";
@@ -170,12 +213,12 @@ router.patch("/incidents/:id", requireAuth, async (req, res): Promise<void> => {
   // Non-admins are limited to the workflow graph; admins can force any
   // transition, but it's flagged and logged distinctly as an override.
   let isAdminOverride = false;
-  if (parsed.data.status && parsed.data.status !== target.status) {
-    const isValidTransition = isAllowedStatusTransition(target.status, parsed.data.status);
+  if (data.status && data.status !== target.status) {
+    const isValidTransition = isAllowedStatusTransition(target.status, data.status);
     if (!isValidTransition) {
       if (!isAdmin) {
         res.status(400).json({
-          error: `Cannot change status from "${target.status}" to "${parsed.data.status}"`,
+          error: `Cannot change status from "${target.status}" to "${data.status}"`,
         });
         return;
       }
@@ -183,17 +226,55 @@ router.patch("/incidents/:id", requireAuth, async (req, res): Promise<void> => {
     }
   }
 
-  await db.update(incidentsTable).set(parsed.data).where(eq(incidentsTable.id, id));
+  // Computed update set, mirroring updateOfficer — replaces a blind
+  // `.set(parsed.data)` so category can never be read from the client and
+  // dateReported/investigatingOfficerId/settledDate get server-side
+  // validation/derivation instead of being written verbatim.
+  const today = new Date().toISOString().slice(0, 10);
+  const updates: Record<string, unknown> = {};
+  if (data.date !== undefined) updates.date = data.date;
+  if (data.time !== undefined) updates.time = data.time;
+  if (data.location !== undefined) updates.location = data.location;
+  if (data.type !== undefined) {
+    updates.type = data.type;
+    updates.category = deriveCategory(data.type);
+  }
+  if (data.description !== undefined) updates.description = data.description;
+  if (data.witnessStatements !== undefined) updates.witnessStatements = data.witnessStatements;
+  if (data.evidence !== undefined) updates.evidence = data.evidence;
+  if (data.notes !== undefined) updates.notes = data.notes;
+  if (data.dateReported !== undefined) {
+    if (data.dateReported !== null) {
+      const reportedCheck = validateReportedDate(data.dateReported, data.date ?? target.date, today);
+      if (!reportedCheck.ok) { res.status(400).json({ error: reportedCheck.error }); return; }
+    }
+    updates.dateReported = data.dateReported;
+  }
+  if (data.investigatingOfficerId !== undefined) {
+    if (data.investigatingOfficerId !== null) {
+      const [investigator] = await db.select({ id: officersTable.id }).from(officersTable)
+        .where(eq(officersTable.id, data.investigatingOfficerId));
+      if (!investigator) { res.status(400).json({ error: "Investigating officer not found" }); return; }
+    }
+    updates.investigatingOfficerId = data.investigatingOfficerId;
+  }
+  if (data.status !== undefined) {
+    updates.status = data.status;
+    updates.settledDate = resolveSettledDate(data.status, undefined, today);
+  }
+
+  await db.update(incidentsTable).set(updates).where(eq(incidentsTable.id, id));
   if (isAdminOverride) {
     await logAction(
       req.officer!.id,
       "ADMIN_STATUS_OVERRIDE",
-      `Forced incident id ${id} status from "${target.status}" to "${parsed.data.status}" outside the normal workflow`,
+      `Forced incident id ${id} status from "${target.status}" to "${data.status}" outside the normal workflow`,
     );
   }
   await logAction(req.officer!.id, "UPDATE_INCIDENT", `Updated incident id ${id}`);
   const [row] = await db.select(incidentSelect).from(incidentsTable)
     .leftJoin(officersTable, eq(incidentsTable.reportingOfficerId, officersTable.id))
+    .leftJoin(investigatingOfficer, eq(incidentsTable.investigatingOfficerId, investigatingOfficer.id))
     .where(eq(incidentsTable.id, id));
   if (!row) { res.status(404).json({ error: "Incident not found" }); return; }
   res.json(formatIncident(row));
