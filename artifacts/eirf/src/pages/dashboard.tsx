@@ -15,6 +15,8 @@ import {
 } from "recharts";
 import { FileText, Clock, CheckCircle2, AlertTriangle, ArrowRight, Shield } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { getStatusColor, getStatusLabel } from "@/lib/incident-status";
+import { cn } from "@/lib/utils";
 
 const PIE_COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
@@ -47,20 +49,6 @@ export default function Dashboard() {
     { title: "Open Cases", value: stats.openIncidents, icon: Clock, color: "text-red-500", bg: "bg-red-100 dark:bg-red-900/20" },
     { title: "Closed Cases", value: stats.closedIncidents, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-100 dark:bg-emerald-900/20" },
   ];
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'open': return "destructive";
-      case 'under_investigation': return "secondary";
-      case 'closed': return "outline";
-      case 'archived': return "outline";
-      default: return "default";
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    return status.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -161,7 +149,7 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-mono text-xs text-muted-foreground">{incident.incidentNumber}</span>
-                        <Badge variant={getStatusColor(incident.status) as any} className="text-xs">
+                        <Badge variant={getStatusColor(incident.status).variant} className={cn("text-xs", getStatusColor(incident.status).className)}>
                           {getStatusLabel(incident.status)}
                         </Badge>
                       </div>

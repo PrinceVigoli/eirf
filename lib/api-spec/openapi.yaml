@@ -16,6 +16,8 @@ tags:
     description: Incident records
   - name: officers
     description: Officer accounts
+  - name: persons
+    description: Persons registry
   - name: dashboard
     description: Dashboard statistics
   - name: logs
@@ -140,6 +142,10 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/IncidentStatus"
+        - name: category
+          in: query
+          schema:
+            $ref: "#/components/schemas/IncidentCategory"
         - name: startDate
           in: query
           schema:
@@ -337,6 +343,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
 
+  /officers/roster:
+    get:
+      operationId: listOfficerRoster
+      tags: [officers]
+      summary: List officer roster for pickers (id, name, rank, badge only)
+      responses:
+        "200":
+          description: Officer roster
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfficerRosterEntry"
+
   /dashboard/stats:
     get:
       operationId: getDashboardStats
@@ -482,6 +503,213 @@ paths:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
 
+  /persons:
+    get:
+      operationId: listPersons
+      tags: [persons]
+      summary: List / search persons
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: role
+          in: query
+          schema:
+            $ref: "#/components/schemas/PersonRole"
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of persons
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonListResponse"
+    post:
+      operationId: createPerson
+      tags: [persons]
+      summary: Create person
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PersonInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+
+  /persons/{id}:
+    get:
+      operationId: getPerson
+      tags: [persons]
+      summary: Get person by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Person found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updatePerson
+      tags: [persons]
+      summary: Update person
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PersonUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+    delete:
+      operationId: deletePerson
+      tags: [persons]
+      summary: Delete person
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "409":
+          description: Person is linked to one or more incidents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /persons/{id}/incidents:
+    get:
+      operationId: getPersonIncidents
+      tags: [persons]
+      summary: List incidents a person is linked to
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Incidents for this person
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PersonIncident"
+
+  /incidents/{id}/persons:
+    get:
+      tags: [incidents]
+      operationId: listIncidentPersons
+      summary: List persons linked to an incident
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Linked persons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IncidentPerson'
+    post:
+      tags: [incidents]
+      operationId: addIncidentPerson
+      summary: Link a person to an incident
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncidentPersonInput'
+      responses:
+        "201":
+          description: Person linked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentPerson'
+
+  /incidents/{id}/persons/{linkId}:
+    delete:
+      tags: [incidents]
+      operationId: removeIncidentPerson
+      summary: Unlink a person from an incident
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: linkId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Person unlinked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
   /logs:
     get:
       operationId: listLogs
@@ -607,9 +835,12 @@ components:
         role:
           $ref: "#/components/schemas/OfficerUpdateRole"
 
+    # Keep in sync with lib/db/src/schema/incidents.ts's incidentStatusEnum
+    # and artifacts/eirf/src/lib/incident-status.ts's ALL_STATUSES. `settled`
+    # sits between `under_investigation` and `closed` in the case workflow.
     IncidentStatus:
       type: string
-      enum: [open, under_investigation, closed, archived]
+      enum: [open, under_investigation, settled, closed, archived]
 
     # Was previously a plain `string` on every incident schema below — any
     # caller hitting the API directly (not just the UI's dropdown) could
@@ -622,9 +853,16 @@ components:
       type: string
       enum: [Crime, Accident, Dispute, "Missing Person", Other]
 
+    # Server-derived from `type` (never client-set): Crime -> "crime",
+    # everything else -> "non_crime". Keep in sync with
+    # lib/db/src/schema/incidents.ts's incidentCategoryEnum.
+    IncidentCategory:
+      type: string
+      enum: [crime, non_crime]
+
     Incident:
       type: object
-      required: [id, incidentNumber, date, time, location, type, description, status, createdAt, updatedAt]
+      required: [id, incidentNumber, date, time, location, type, description, status, category, createdAt, updatedAt]
       properties:
         id:
           type: integer
@@ -652,6 +890,20 @@ components:
           type: ["string", "null"]
         notes:
           type: ["string", "null"]
+        dateReported:
+          type: ["string", "null"]
+        investigatingOfficerId:
+          type: ["integer", "null"]
+        investigatingOfficerName:
+          type: ["string", "null"]
+        category:
+          $ref: "#/components/schemas/IncidentCategory"
+        settledDate:
+          type: ["string", "null"]
+        persons:
+          type: array
+          items:
+            $ref: "#/components/schemas/IncidentPerson"
         createdAt:
           type: string
         updatedAt:
@@ -677,8 +929,16 @@ components:
           type: string
         notes:
           type: string
+        dateReported:
+          type: string
+        investigatingOfficerId:
+          type: integer
         status:
           $ref: "#/components/schemas/IncidentStatus"
+        personsInvolved:
+          type: array
+          items:
+            $ref: "#/components/schemas/IncidentPersonInput"
 
     IncidentUpdate:
       type: object
@@ -699,6 +959,10 @@ components:
           type: ["string", "null"]
         notes:
           type: ["string", "null"]
+        dateReported:
+          type: ["string", "null"]
+        investigatingOfficerId:
+          type: ["integer", "null"]
         status:
           $ref: "#/components/schemas/IncidentStatus"
 
@@ -716,6 +980,223 @@ components:
           type: integer
         limit:
           type: integer
+
+    # Keep in sync with lib/db/src/schema/incident_persons.ts's personRoleEnum.
+    PersonRole:
+      type: string
+      enum: [victim, complainant, suspect, witness]
+
+    Person:
+      type: object
+      required: [id, fullName, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        alias:
+          type: ["string", "null"]
+        dateOfBirth:
+          type: ["string", "null"]
+        sex:
+          type: ["string", "null"]
+        nationality:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        contactNumber:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        idType:
+          type: ["string", "null"]
+        idNumber:
+          type: ["string", "null"]
+        occupation:
+          type: ["string", "null"]
+        physicalDescription:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    PersonInput:
+      type: object
+      required: [fullName]
+      properties:
+        fullName:
+          type: string
+        alias:
+          type: string
+        dateOfBirth:
+          type: string
+        sex:
+          type: string
+        nationality:
+          type: string
+        address:
+          type: string
+        contactNumber:
+          type: string
+        email:
+          type: string
+        idType:
+          type: string
+        idNumber:
+          type: string
+        occupation:
+          type: string
+        physicalDescription:
+          type: string
+        notes:
+          type: string
+
+    PersonUpdate:
+      type: object
+      properties:
+        fullName:
+          type: string
+        alias:
+          type: string
+        dateOfBirth:
+          type: string
+        sex:
+          type: string
+        nationality:
+          type: string
+        address:
+          type: string
+        contactNumber:
+          type: string
+        email:
+          type: string
+        idType:
+          type: string
+        idNumber:
+          type: string
+        occupation:
+          type: string
+        physicalDescription:
+          type: string
+        notes:
+          type: string
+
+    IncidentPersonInput:
+      type: object
+      required: [personId, role]
+      properties:
+        personId:
+          type: integer
+        role:
+          $ref: "#/components/schemas/PersonRole"
+        roleDetails:
+          type: string
+
+    IncidentPerson:
+      type: object
+      required: [id, incidentId, personId, role, person, createdAt]
+      properties:
+        id:
+          type: integer
+        incidentId:
+          type: integer
+        personId:
+          type: integer
+        role:
+          $ref: "#/components/schemas/PersonRole"
+        roleDetails:
+          type: ["string", "null"]
+        person:
+          $ref: "#/components/schemas/Person"
+        createdAt:
+          type: string
+
+    # All `Incident` properties plus the link's `role`/`roleDetails`. Returned
+    # by GET /persons/{id}/incidents. This spec does not use `allOf`, so the
+    # Incident properties are copied here; keep the two in sync.
+    PersonIncident:
+      type: object
+      required: [id, incidentNumber, date, time, location, type, description, status, category, createdAt, updatedAt, role]
+      properties:
+        id:
+          type: integer
+        incidentNumber:
+          type: string
+        date:
+          type: string
+        time:
+          type: string
+        location:
+          type: string
+        type:
+          $ref: "#/components/schemas/IncidentType"
+        description:
+          type: string
+        status:
+          $ref: "#/components/schemas/IncidentStatus"
+        reportingOfficerId:
+          type: ["integer", "null"]
+        reportingOfficerName:
+          type: ["string", "null"]
+        witnessStatements:
+          type: ["string", "null"]
+        evidence:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        dateReported:
+          type: ["string", "null"]
+        investigatingOfficerId:
+          type: ["integer", "null"]
+        investigatingOfficerName:
+          type: ["string", "null"]
+        category:
+          $ref: "#/components/schemas/IncidentCategory"
+        settledDate:
+          type: ["string", "null"]
+        persons:
+          type: array
+          items:
+            $ref: "#/components/schemas/IncidentPerson"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        role:
+          $ref: "#/components/schemas/PersonRole"
+        roleDetails:
+          type: ["string", "null"]
+
+    PersonListResponse:
+      type: object
+      required: [persons, total, page, limit]
+      properties:
+        persons:
+          type: array
+          items:
+            $ref: "#/components/schemas/Person"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    OfficerRosterEntry:
+      type: object
+      required: [id, name, rank, badgeNumber]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        rank:
+          type: string
+        badgeNumber:
+          type: string
 
     DashboardStats:
       type: object

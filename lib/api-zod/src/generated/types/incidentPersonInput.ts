@@ -5,9 +5,10 @@
  * e-IRF Electronic Incident Records Form API
  * OpenAPI spec version: 0.1.0
  */
-import type { IncidentType } from './incidentType';
+import type { PersonRole } from './personRole';
 
-export interface IncidentTypeCount {
-  type: IncidentType;
-  count: number;
+export interface IncidentPersonInput {
+  personId: number;
+  role: PersonRole;
+  roleDetails?: string;
 }

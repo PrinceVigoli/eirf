@@ -4,10 +4,6 @@
  * Api
  * e-IRF Electronic Incident Records Form API
  * OpenAPI spec version: 0.1.0
- *
- * NOTE: hand-added alongside the IncidentType enum in openapi.yaml (see
- * U4/B4 in the audit) — re-run `pnpm --filter @workspace/api-spec run
- * codegen` to regenerate this properly once dependencies are installed.
  */
 
 export type IncidentType = typeof IncidentType[keyof typeof IncidentType];
@@ -17,6 +13,6 @@ export const IncidentType = {
   Crime: 'Crime',
   Accident: 'Accident',
   Dispute: 'Dispute',
-  'Missing Person': 'Missing Person',
+  Missing_Person: 'Missing Person',
   Other: 'Other',
 } as const;

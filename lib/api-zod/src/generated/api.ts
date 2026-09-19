@@ -4,13 +4,6 @@
  * Api
  * e-IRF Electronic Incident Records Form API
  * OpenAPI spec version: 0.1.0
- *
- * NOTE: the `type` fields below were hand-synced to the IncidentType enum
- * added in lib/api-spec/openapi.yaml (see U4/B4 in the audit) because this
- * archive doesn't include node_modules/a lockfile to actually run
- * `pnpm --filter @workspace/api-spec run codegen`. Re-run codegen the next
- * time dependencies are installed to regenerate this file properly instead
- * of relying on the hand edit.
  */
 import * as zod from 'zod';
 
@@ -89,7 +82,8 @@ export const ChangePasswordResponse = zod.object({
 export const ListIncidentsQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
   "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']).optional(),
-  "status": zod.coerce.string().optional(),
+  "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']).optional(),
+  "category": zod.enum(['crime', 'non_crime']).optional(),
   "startDate": zod.coerce.string().optional(),
   "endDate": zod.coerce.string().optional(),
   "page": zod.coerce.number().optional(),
@@ -105,12 +99,43 @@ export const ListIncidentsResponse = zod.object({
   "location": zod.string(),
   "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']),
   "description": zod.string(),
-  "status": zod.enum(['open', 'under_investigation', 'closed', 'archived']),
+  "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']),
   "reportingOfficerId": zod.number().nullish(),
   "reportingOfficerName": zod.string().nullish(),
   "witnessStatements": zod.string().nullish(),
   "evidence": zod.string().nullish(),
   "notes": zod.string().nullish(),
+  "dateReported": zod.string().nullish(),
+  "investigatingOfficerId": zod.number().nullish(),
+  "investigatingOfficerName": zod.string().nullish(),
+  "category": zod.enum(['crime', 'non_crime']),
+  "settledDate": zod.string().nullish(),
+  "persons": zod.array(zod.object({
+  "id": zod.number(),
+  "incidentId": zod.number(),
+  "personId": zod.number(),
+  "role": zod.enum(['victim', 'complainant', 'suspect', 'witness']),
+  "roleDetails": zod.string().nullish(),
+  "person": zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "alias": zod.string().nullish(),
+  "dateOfBirth": zod.string().nullish(),
+  "sex": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "contactNumber": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "idType": zod.string().nullish(),
+  "idNumber": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "physicalDescription": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),
+  "createdAt": zod.string()
+})).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })),
@@ -132,7 +157,14 @@ export const CreateIncidentBody = zod.object({
   "witnessStatements": zod.string().optional(),
   "evidence": zod.string().optional(),
   "notes": zod.string().optional(),
-  "status": zod.enum(['open', 'under_investigation', 'closed', 'archived']).optional()
+  "dateReported": zod.string().optional(),
+  "investigatingOfficerId": zod.number().optional(),
+  "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']).optional(),
+  "personsInvolved": zod.array(zod.object({
+  "personId": zod.number(),
+  "role": zod.enum(['victim', 'complainant', 'suspect', 'witness']),
+  "roleDetails": zod.string().optional()
+})).optional()
 })
 
 export const CreateIncidentResponse = zod.object({
@@ -143,12 +175,43 @@ export const CreateIncidentResponse = zod.object({
   "location": zod.string(),
   "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']),
   "description": zod.string(),
-  "status": zod.enum(['open', 'under_investigation', 'closed', 'archived']),
+  "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']),
   "reportingOfficerId": zod.number().nullish(),
   "reportingOfficerName": zod.string().nullish(),
   "witnessStatements": zod.string().nullish(),
   "evidence": zod.string().nullish(),
   "notes": zod.string().nullish(),
+  "dateReported": zod.string().nullish(),
+  "investigatingOfficerId": zod.number().nullish(),
+  "investigatingOfficerName": zod.string().nullish(),
+  "category": zod.enum(['crime', 'non_crime']),
+  "settledDate": zod.string().nullish(),
+  "persons": zod.array(zod.object({
+  "id": zod.number(),
+  "incidentId": zod.number(),
+  "personId": zod.number(),
+  "role": zod.enum(['victim', 'complainant', 'suspect', 'witness']),
+  "roleDetails": zod.string().nullish(),
+  "person": zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "alias": zod.string().nullish(),
+  "dateOfBirth": zod.string().nullish(),
+  "sex": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "contactNumber": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "idType": zod.string().nullish(),
+  "idNumber": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "physicalDescription": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),
+  "createdAt": zod.string()
+})).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -169,12 +232,43 @@ export const GetIncidentResponse = zod.object({
   "location": zod.string(),
   "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']),
   "description": zod.string(),
-  "status": zod.enum(['open', 'under_investigation', 'closed', 'archived']),
+  "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']),
   "reportingOfficerId": zod.number().nullish(),
   "reportingOfficerName": zod.string().nullish(),
   "witnessStatements": zod.string().nullish(),
   "evidence": zod.string().nullish(),
   "notes": zod.string().nullish(),
+  "dateReported": zod.string().nullish(),
+  "investigatingOfficerId": zod.number().nullish(),
+  "investigatingOfficerName": zod.string().nullish(),
+  "category": zod.enum(['crime', 'non_crime']),
+  "settledDate": zod.string().nullish(),
+  "persons": zod.array(zod.object({
+  "id": zod.number(),
+  "incidentId": zod.number(),
+  "personId": zod.number(),
+  "role": zod.enum(['victim', 'complainant', 'suspect', 'witness']),
+  "roleDetails": zod.string().nullish(),
+  "person": zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "alias": zod.string().nullish(),
+  "dateOfBirth": zod.string().nullish(),
+  "sex": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "contactNumber": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "idType": zod.string().nullish(),
+  "idNumber": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "physicalDescription": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),
+  "createdAt": zod.string()
+})).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -196,7 +290,9 @@ export const UpdateIncidentBody = zod.object({
   "witnessStatements": zod.string().nullish(),
   "evidence": zod.string().nullish(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['open', 'under_investigation', 'closed', 'archived']).optional()
+  "dateReported": zod.string().nullish(),
+  "investigatingOfficerId": zod.number().nullish(),
+  "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']).optional()
 })
 
 export const UpdateIncidentResponse = zod.object({
@@ -207,12 +303,43 @@ export const UpdateIncidentResponse = zod.object({
   "location": zod.string(),
   "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']),
   "description": zod.string(),
-  "status": zod.enum(['open', 'under_investigation', 'closed', 'archived']),
+  "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']),
   "reportingOfficerId": zod.number().nullish(),
   "reportingOfficerName": zod.string().nullish(),
   "witnessStatements": zod.string().nullish(),
   "evidence": zod.string().nullish(),
   "notes": zod.string().nullish(),
+  "dateReported": zod.string().nullish(),
+  "investigatingOfficerId": zod.number().nullish(),
+  "investigatingOfficerName": zod.string().nullish(),
+  "category": zod.enum(['crime', 'non_crime']),
+  "settledDate": zod.string().nullish(),
+  "persons": zod.array(zod.object({
+  "id": zod.number(),
+  "incidentId": zod.number(),
+  "personId": zod.number(),
+  "role": zod.enum(['victim', 'complainant', 'suspect', 'witness']),
+  "roleDetails": zod.string().nullish(),
+  "person": zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "alias": zod.string().nullish(),
+  "dateOfBirth": zod.string().nullish(),
+  "sex": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "contactNumber": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "idType": zod.string().nullish(),
+  "idNumber": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "physicalDescription": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),
+  "createdAt": zod.string()
+})).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -326,6 +453,18 @@ export const DeleteOfficerResponse = zod.object({
 
 
 /**
+ * @summary List officer roster for pickers (id, name, rank, badge only)
+ */
+export const ListOfficerRosterResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "rank": zod.string(),
+  "badgeNumber": zod.string()
+})
+export const ListOfficerRosterResponse = zod.array(ListOfficerRosterResponseItem)
+
+
+/**
  * @summary Get dashboard statistics
  */
 export const GetDashboardStatsResponse = zod.object({
@@ -369,12 +508,43 @@ export const GetRecentIncidentsResponseItem = zod.object({
   "location": zod.string(),
   "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']),
   "description": zod.string(),
-  "status": zod.enum(['open', 'under_investigation', 'closed', 'archived']),
+  "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']),
   "reportingOfficerId": zod.number().nullish(),
   "reportingOfficerName": zod.string().nullish(),
   "witnessStatements": zod.string().nullish(),
   "evidence": zod.string().nullish(),
   "notes": zod.string().nullish(),
+  "dateReported": zod.string().nullish(),
+  "investigatingOfficerId": zod.number().nullish(),
+  "investigatingOfficerName": zod.string().nullish(),
+  "category": zod.enum(['crime', 'non_crime']),
+  "settledDate": zod.string().nullish(),
+  "persons": zod.array(zod.object({
+  "id": zod.number(),
+  "incidentId": zod.number(),
+  "personId": zod.number(),
+  "role": zod.enum(['victim', 'complainant', 'suspect', 'witness']),
+  "roleDetails": zod.string().nullish(),
+  "person": zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "alias": zod.string().nullish(),
+  "dateOfBirth": zod.string().nullish(),
+  "sex": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "contactNumber": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "idType": zod.string().nullish(),
+  "idNumber": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "physicalDescription": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),
+  "createdAt": zod.string()
+})).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -408,6 +578,9 @@ export const ListEvidenceFilesParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const listEvidenceFilesResponseSha256RegExp = new RegExp('^[a-f0-9]{64}$');
+
+
 export const ListEvidenceFilesResponseItem = zod.object({
   "id": zod.number(),
   "incidentId": zod.number(),
@@ -415,6 +588,7 @@ export const ListEvidenceFilesResponseItem = zod.object({
   "objectPath": zod.string(),
   "contentType": zod.string(),
   "fileSize": zod.number().nullish(),
+  "sha256": zod.string().regex(listEvidenceFilesResponseSha256RegExp).nullish().describe('SHA-256 fingerprint calculated from the stored file bytes'),
   "uploadedById": zod.number().nullable(),
   "uploadedByName": zod.string().nullish(),
   "createdAt": zod.string()
@@ -436,6 +610,9 @@ export const AddEvidenceFileBody = zod.object({
   "fileSize": zod.number().nullish()
 })
 
+export const addEvidenceFileResponseSha256RegExp = new RegExp('^[a-f0-9]{64}$');
+
+
 export const AddEvidenceFileResponse = zod.object({
   "id": zod.number(),
   "incidentId": zod.number(),
@@ -443,6 +620,7 @@ export const AddEvidenceFileResponse = zod.object({
   "objectPath": zod.string(),
   "contentType": zod.string(),
   "fileSize": zod.number().nullish(),
+  "sha256": zod.string().regex(addEvidenceFileResponseSha256RegExp).nullish().describe('SHA-256 fingerprint calculated from the stored file bytes'),
   "uploadedById": zod.number().nullable(),
   "uploadedByName": zod.string().nullish(),
   "createdAt": zod.string()
@@ -458,6 +636,312 @@ export const DeleteEvidenceFileParams = zod.object({
 })
 
 export const DeleteEvidenceFileResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary List / search persons
+ */
+export const ListPersonsQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "role": zod.enum(['victim', 'complainant', 'suspect', 'witness']).optional(),
+  "page": zod.coerce.number().optional(),
+  "limit": zod.coerce.number().optional()
+})
+
+export const ListPersonsResponse = zod.object({
+  "persons": zod.array(zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "alias": zod.string().nullish(),
+  "dateOfBirth": zod.string().nullish(),
+  "sex": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "contactNumber": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "idType": zod.string().nullish(),
+  "idNumber": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "physicalDescription": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "total": zod.number(),
+  "page": zod.number(),
+  "limit": zod.number()
+})
+
+
+/**
+ * @summary Create person
+ */
+export const CreatePersonBody = zod.object({
+  "fullName": zod.string(),
+  "alias": zod.string().optional(),
+  "dateOfBirth": zod.string().optional(),
+  "sex": zod.string().optional(),
+  "nationality": zod.string().optional(),
+  "address": zod.string().optional(),
+  "contactNumber": zod.string().optional(),
+  "email": zod.string().optional(),
+  "idType": zod.string().optional(),
+  "idNumber": zod.string().optional(),
+  "occupation": zod.string().optional(),
+  "physicalDescription": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+export const CreatePersonResponse = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "alias": zod.string().nullish(),
+  "dateOfBirth": zod.string().nullish(),
+  "sex": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "contactNumber": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "idType": zod.string().nullish(),
+  "idNumber": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "physicalDescription": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Get person by ID
+ */
+export const GetPersonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPersonResponse = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "alias": zod.string().nullish(),
+  "dateOfBirth": zod.string().nullish(),
+  "sex": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "contactNumber": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "idType": zod.string().nullish(),
+  "idNumber": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "physicalDescription": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update person
+ */
+export const UpdatePersonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdatePersonBody = zod.object({
+  "fullName": zod.string().optional(),
+  "alias": zod.string().optional(),
+  "dateOfBirth": zod.string().optional(),
+  "sex": zod.string().optional(),
+  "nationality": zod.string().optional(),
+  "address": zod.string().optional(),
+  "contactNumber": zod.string().optional(),
+  "email": zod.string().optional(),
+  "idType": zod.string().optional(),
+  "idNumber": zod.string().optional(),
+  "occupation": zod.string().optional(),
+  "physicalDescription": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+export const UpdatePersonResponse = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "alias": zod.string().nullish(),
+  "dateOfBirth": zod.string().nullish(),
+  "sex": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "contactNumber": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "idType": zod.string().nullish(),
+  "idNumber": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "physicalDescription": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Delete person
+ */
+export const DeletePersonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeletePersonResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary List incidents a person is linked to
+ */
+export const GetPersonIncidentsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPersonIncidentsResponseItem = zod.object({
+  "id": zod.number(),
+  "incidentNumber": zod.string(),
+  "date": zod.string(),
+  "time": zod.string(),
+  "location": zod.string(),
+  "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']),
+  "description": zod.string(),
+  "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']),
+  "reportingOfficerId": zod.number().nullish(),
+  "reportingOfficerName": zod.string().nullish(),
+  "witnessStatements": zod.string().nullish(),
+  "evidence": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "dateReported": zod.string().nullish(),
+  "investigatingOfficerId": zod.number().nullish(),
+  "investigatingOfficerName": zod.string().nullish(),
+  "category": zod.enum(['crime', 'non_crime']),
+  "settledDate": zod.string().nullish(),
+  "persons": zod.array(zod.object({
+  "id": zod.number(),
+  "incidentId": zod.number(),
+  "personId": zod.number(),
+  "role": zod.enum(['victim', 'complainant', 'suspect', 'witness']),
+  "roleDetails": zod.string().nullish(),
+  "person": zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "alias": zod.string().nullish(),
+  "dateOfBirth": zod.string().nullish(),
+  "sex": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "contactNumber": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "idType": zod.string().nullish(),
+  "idNumber": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "physicalDescription": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),
+  "createdAt": zod.string()
+})).optional(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "role": zod.enum(['victim', 'complainant', 'suspect', 'witness']),
+  "roleDetails": zod.string().nullish()
+})
+export const GetPersonIncidentsResponse = zod.array(GetPersonIncidentsResponseItem)
+
+
+/**
+ * @summary List persons linked to an incident
+ */
+export const ListIncidentPersonsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListIncidentPersonsResponseItem = zod.object({
+  "id": zod.number(),
+  "incidentId": zod.number(),
+  "personId": zod.number(),
+  "role": zod.enum(['victim', 'complainant', 'suspect', 'witness']),
+  "roleDetails": zod.string().nullish(),
+  "person": zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "alias": zod.string().nullish(),
+  "dateOfBirth": zod.string().nullish(),
+  "sex": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "contactNumber": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "idType": zod.string().nullish(),
+  "idNumber": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "physicalDescription": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),
+  "createdAt": zod.string()
+})
+export const ListIncidentPersonsResponse = zod.array(ListIncidentPersonsResponseItem)
+
+
+/**
+ * @summary Link a person to an incident
+ */
+export const AddIncidentPersonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AddIncidentPersonBody = zod.object({
+  "personId": zod.number(),
+  "role": zod.enum(['victim', 'complainant', 'suspect', 'witness']),
+  "roleDetails": zod.string().optional()
+})
+
+export const AddIncidentPersonResponse = zod.object({
+  "id": zod.number(),
+  "incidentId": zod.number(),
+  "personId": zod.number(),
+  "role": zod.enum(['victim', 'complainant', 'suspect', 'witness']),
+  "roleDetails": zod.string().nullish(),
+  "person": zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "alias": zod.string().nullish(),
+  "dateOfBirth": zod.string().nullish(),
+  "sex": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "contactNumber": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "idType": zod.string().nullish(),
+  "idNumber": zod.string().nullish(),
+  "occupation": zod.string().nullish(),
+  "physicalDescription": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Unlink a person from an incident
+ */
+export const RemoveIncidentPersonParams = zod.object({
+  "id": zod.coerce.number(),
+  "linkId": zod.coerce.number()
+})
+
+export const RemoveIncidentPersonResponse = zod.object({
   "message": zod.string()
 })
 

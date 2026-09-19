@@ -47,6 +47,9 @@ testem.log
 .DS_Store
 Thumbs.db
 
+# Superpowers SDD scratch (ledger, briefs, review packages)
+.superpowers/
+
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
 

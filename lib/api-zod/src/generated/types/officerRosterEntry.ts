@@ -5,9 +5,10 @@
  * e-IRF Electronic Incident Records Form API
  * OpenAPI spec version: 0.1.0
  */
-import type { IncidentType } from './incidentType';
 
-export interface IncidentTypeCount {
-  type: IncidentType;
-  count: number;
+export interface OfficerRosterEntry {
+  id: number;
+  name: string;
+  rank: string;
+  badgeNumber: string;
 }

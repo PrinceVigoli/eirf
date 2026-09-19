@@ -8,6 +8,8 @@ import { ArrowLeft, Printer, Edit, Calendar, MapPin, Tag, User, ShieldAlert, Dow
 import { format } from "date-fns";
 import { EvidencePanel } from "@/components/evidence-panel";
 import { usePublicSettings } from "@/lib/system-api";
+import { getStatusColor, getStatusLabel } from "@/lib/incident-status";
+import { cn } from "@/lib/utils";
 
 export default function IncidentDetail() {
   const params = useParams();
@@ -29,18 +31,6 @@ export default function IncidentDetail() {
   if (!incident) {
     return <div className="text-center p-12 text-muted-foreground">Incident not found.</div>;
   }
-
-  const getStatusColor = (status: string): any => {
-    switch (status) {
-      case 'open': return "destructive";
-      case 'under_investigation': return "secondary";
-      case 'closed': return "outline";
-      default: return "default";
-    }
-  };
-
-  const getStatusLabel = (status: string) =>
-    status.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -128,7 +118,7 @@ export default function IncidentDetail() {
             <CardContent className="p-6 space-y-4">
               <div>
                 <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">Status</p>
-                <Badge variant={getStatusColor(incident.status)} className="text-sm">
+                <Badge variant={getStatusColor(incident.status).variant} className={cn("text-sm", getStatusColor(incident.status).className)}>
                   {getStatusLabel(incident.status)}
                 </Badge>
               </div>
