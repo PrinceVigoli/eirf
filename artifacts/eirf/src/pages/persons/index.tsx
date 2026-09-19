@@ -43,7 +43,7 @@ export default function PersonList() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
             <UserSearch className="w-8 h-8 text-primary" />
-            Persons
+            Name Index
           </h1>
           <p className="text-muted-foreground mt-1">
             Search victims, complainants, suspects, and witnesses across all incidents
