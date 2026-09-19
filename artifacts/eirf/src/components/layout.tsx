@@ -100,8 +100,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
         collapsed && "md:w-[4.5rem]",
         isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
+        {/* Collapse toggle — top-right on desktop (mobile uses the slide-in drawer) */}
+        <div className={cn("hidden md:flex items-center px-3 pt-3", collapsed ? "justify-center" : "justify-end")}>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="inline-flex items-center justify-center h-7 w-7 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+          >
+            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          </button>
+        </div>
         <div className={cn(
-          "flex items-center gap-3 p-6 border-b border-sidebar-border",
+          "flex items-center gap-3 px-6 pt-3 pb-6 border-b border-sidebar-border",
           collapsed && "md:flex-col md:gap-2 md:p-3"
         )}>
           <div className="bg-white rounded-md p-1 shrink-0">
@@ -165,26 +177,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className={cn("p-4 border-t border-sidebar-border mt-auto space-y-1", collapsed && "md:px-2")}>
-          {/* Desktop-only collapse toggle (mobile uses the slide-in drawer) */}
-          <Button
-            variant="ghost"
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            onClick={toggleCollapsed}
-            className={cn(
-              "w-full text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hidden md:flex",
-              collapsed ? "md:justify-center md:px-2" : "justify-start"
-            )}
-          >
-            {collapsed ? (
-              <PanelLeftOpen className="h-4 w-4" />
-            ) : (
-              <>
-                <PanelLeftClose className="h-4 w-4 mr-2" />
-                <span>Collapse</span>
-              </>
-            )}
-          </Button>
+        <div className={cn("p-4 border-t border-sidebar-border mt-auto", collapsed && "md:px-2")}>
           <Button
             variant="ghost"
             title={collapsed ? "Sign Out" : undefined}
