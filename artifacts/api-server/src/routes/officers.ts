@@ -2,7 +2,7 @@ import { Router } from "express";
 import bcryptjs from "bcryptjs";
 import { db, officersTable } from "@workspace/db";
 import { eq, count, sql } from "drizzle-orm";
-import { requireAdmin } from "../middlewares/requireAuth";
+import { requireAdmin, requireAuth } from "../middlewares/requireAuth";
 import { CreateOfficerBody, UpdateOfficerBody } from "@workspace/api-zod";
 import { logAction } from "../lib/logger-helper";
 import { paramString } from "../lib/params";
@@ -32,6 +32,23 @@ function formatOfficer(o: typeof officersTable.$inferSelect) {
     createdAt: o.createdAt.toISOString(),
   };
 }
+
+// Readable by all authenticated users (e.g. the investigating-officer picker),
+// unlike the admin-only /officers list below. Must stay before /officers/:id
+// so "roster" isn't captured as an :id param. Projection excludes
+// username/passwordHash/role/etc — only picker-safe fields.
+router.get("/officers/roster", requireAuth, async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({
+      id: officersTable.id,
+      name: officersTable.name,
+      rank: officersTable.rank,
+      badgeNumber: officersTable.badgeNumber,
+    })
+    .from(officersTable)
+    .orderBy(officersTable.name);
+  res.json(rows);
+});
 
 router.get("/officers", requireAdmin, async (req, res): Promise<void> => {
   const rows = await db.select().from(officersTable).orderBy(officersTable.name);
