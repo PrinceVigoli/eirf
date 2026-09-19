@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShieldAlert, User, Lock } from "lucide-react";
+import { User, Lock } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePublicSettings } from "@/lib/system-api";
 
@@ -50,8 +50,12 @@ export default function Login() {
 
       <div className="z-10 w-full max-w-md px-6">
         <div className="flex flex-col items-center mb-8">
-          <div className="bg-blue-600 text-white p-4 rounded-2xl mb-4 shadow-lg shadow-blue-900/40">
-            <ShieldAlert className="h-10 w-10" />
+          <div className="bg-white p-3 rounded-2xl mb-4 shadow-lg shadow-blue-900/40">
+            <img
+              src={`${import.meta.env.BASE_URL}pnp-logo.jpg`}
+              alt="Philippine National Police"
+              className="h-16 w-16 object-contain"
+            />
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight">{station?.stationName ?? "Police Station"}</h1>
           <p className="text-blue-300/70 text-sm mt-1 uppercase tracking-widest font-mono">{station?.reportTitle ?? "Electronic Incident Records Form"}</p>
