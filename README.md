@@ -13,6 +13,10 @@ and no internet connection required. This setup is intended for **local testing*
 **Prerequisites:** Node.js 22+, [pnpm](https://pnpm.io/), and Docker Desktop (with Linux
 containers enabled and running).
 
+**Fastest — one command:** after installing the prerequisites and cloning, run `.\setup.ps1`
+from the repo root. It checks the prerequisites, installs dependencies, starts everything,
+and offers to create the first administrator. The manual steps below do the same thing.
+
 ```powershell
 # 1. Install dependencies (from the repo root)
 pnpm.cmd install
