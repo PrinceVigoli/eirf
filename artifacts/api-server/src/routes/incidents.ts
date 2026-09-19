@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, incidentsTable, officersTable } from "@workspace/db";
-import { eq, ilike, and, gte, lte, or, desc, count } from "drizzle-orm";
+import { db, incidentsTable, officersTable, incidentPersonsTable, personsTable } from "@workspace/db";
+import { eq, ilike, and, gte, lte, or, desc, count, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { requireAuth, requireAdmin } from "../middlewares/requireAuth";
 import { CreateIncidentBody, UpdateIncidentBody, ListIncidentsQueryParams } from "@workspace/api-zod";
@@ -105,8 +105,9 @@ router.get("/incidents", requireAuth, async (req, res): Promise<void> => {
 router.post("/incidents", requireAuth, async (req, res): Promise<void> => {
   const parsed = CreateIncidentBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
-  // personsInvolved (person-linking) is handled by a later task — strip it
-  // here so it never reaches `.values()` below (it isn't an incidents column).
+  // personsInvolved isn't an incidents column — pulled out here so `data`
+  // (spread into the insert below) never carries it. Linking now happens
+  // for real below instead of being silently dropped.
   const { personsInvolved, ...data } = parsed.data;
   const today = new Date().toISOString().slice(0, 10);
 
@@ -124,26 +125,73 @@ router.post("/incidents", requireAuth, async (req, res): Promise<void> => {
     if (!investigator) { res.status(400).json({ error: "Investigating officer not found" }); return; }
   }
 
+  // De-duplicate (personId, role) pairs before touching the database — the
+  // incident_persons unique index is on (incidentId, personId, role), so an
+  // untouched duplicate pair in the request would otherwise 23505 on
+  // insert. First occurrence wins if roleDetails differs across dupes.
+  const dedupedLinks: NonNullable<typeof personsInvolved> = [];
+  if (personsInvolved?.length) {
+    const seen = new Set<string>();
+    for (const link of personsInvolved) {
+      const key = `${link.personId}:${link.role}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      dedupedLinks.push(link);
+    }
+
+    // Fail closed: validate every referenced person exists before writing
+    // anything. Without this, an unknown personId would only surface as a
+    // foreign-key error mid-transaction (or, without the transaction below,
+    // could leave an incident row with no links at all).
+    const personIds = Array.from(new Set(dedupedLinks.map((link) => link.personId)));
+    const foundPersons = await db.select({ id: personsTable.id }).from(personsTable)
+      .where(inArray(personsTable.id, personIds));
+    const foundIds = new Set(foundPersons.map((p) => p.id));
+    if (personIds.some((pid) => !foundIds.has(pid))) {
+      res.status(400).json({ error: "Unknown personId in personsInvolved" });
+      return;
+    }
+  }
+
   // incidentNumber has a `-####` random suffix, so on a busy day two
   // requests can collide. Retry with a fresh number a few times rather than
   // failing the whole request on a unique-constraint violation (Postgres
-  // error code 23505).
+  // error code 23505). When there are persons to link, each attempt runs in
+  // its own transaction so a collision — or any failure inserting the links
+  // — rolls back the incident row too, instead of leaving it stranded
+  // without its links.
   const MAX_ATTEMPTS = 5;
   let incident: typeof incidentsTable.$inferSelect | undefined;
   let incidentNumber = "";
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     incidentNumber = generateIncidentNumber();
+    const values = {
+      ...data,
+      incidentNumber,
+      status: data.status ?? "open",
+      reportingOfficerId: req.officer!.id,
+      category,
+      dateReported: data.dateReported ?? today,
+      investigatingOfficerId: data.investigatingOfficerId ?? null,
+      settledDate: resolveSettledDate(data.status ?? "open", null, today),
+    };
     try {
-      [incident] = await db.insert(incidentsTable).values({
-        ...data,
-        incidentNumber,
-        status: data.status ?? "open",
-        reportingOfficerId: req.officer!.id,
-        category,
-        dateReported: data.dateReported ?? today,
-        investigatingOfficerId: data.investigatingOfficerId ?? null,
-        settledDate: resolveSettledDate(data.status ?? "open", null, today),
-      }).returning();
+      if (dedupedLinks.length > 0) {
+        [incident] = await db.transaction(async (tx) => {
+          const [inserted] = await tx.insert(incidentsTable).values(values).returning();
+          await tx.insert(incidentPersonsTable).values(
+            dedupedLinks.map((link) => ({
+              incidentId: inserted.id,
+              personId: link.personId,
+              role: link.role,
+              roleDetails: link.roleDetails ?? null,
+            })),
+          );
+          return [inserted];
+        });
+      } else {
+        [incident] = await db.insert(incidentsTable).values(values).returning();
+      }
       break;
     } catch (err: any) {
       const isCollision = err?.code === "23505" && String(err?.constraint ?? "").includes("incident_number");
@@ -182,7 +230,38 @@ router.get("/incidents/:id", requireAuth, async (req, res): Promise<void> => {
     .leftJoin(investigatingOfficer, eq(incidentsTable.investigatingOfficerId, investigatingOfficer.id))
     .where(eq(incidentsTable.id, id));
   if (!row) { res.status(404).json({ error: "Incident not found" }); return; }
-  res.json(formatIncident(row));
+
+  // Persons are attached on the detail view only (the list endpoint stays
+  // lean, per D3) — shaped to match the generated IncidentPerson schema,
+  // with the same ISO-timestamp convention as formatIncident/formatPerson.
+  // innerJoin (not left) is safe here: incident_persons.person_id is
+  // NOT NULL with an ON DELETE RESTRICT reference to persons, so a link row
+  // always has a person.
+  const personLinks = await db.select({
+    id: incidentPersonsTable.id,
+    incidentId: incidentPersonsTable.incidentId,
+    personId: incidentPersonsTable.personId,
+    role: incidentPersonsTable.role,
+    roleDetails: incidentPersonsTable.roleDetails,
+    createdAt: incidentPersonsTable.createdAt,
+    person: personsTable,
+  })
+    .from(incidentPersonsTable)
+    .innerJoin(personsTable, eq(incidentPersonsTable.personId, personsTable.id))
+    .where(eq(incidentPersonsTable.incidentId, id));
+
+  res.json({
+    ...formatIncident(row),
+    persons: personLinks.map((link) => ({
+      ...link,
+      createdAt: link.createdAt.toISOString(),
+      person: {
+        ...link.person,
+        createdAt: link.person.createdAt.toISOString(),
+        updatedAt: link.person.updatedAt.toISOString(),
+      },
+    })),
+  });
 });
 
 router.patch("/incidents/:id", requireAuth, async (req, res): Promise<void> => {
