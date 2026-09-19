@@ -1,6 +1,7 @@
 export const STATUS_TRANSITIONS: Record<string, readonly string[]> = {
-  open: ["open", "under_investigation", "closed"],
-  under_investigation: ["under_investigation", "open", "closed"],
+  open: ["open", "under_investigation", "closed", "settled"],
+  under_investigation: ["under_investigation", "open", "closed", "settled"],
+  settled: ["settled", "under_investigation", "closed"],
   closed: ["closed", "under_investigation", "archived"],
   archived: ["archived", "under_investigation"],
 };
