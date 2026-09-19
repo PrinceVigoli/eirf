@@ -3,13 +3,14 @@ import { db, incidentsTable, officersTable, incidentPersonsTable, personsTable }
 import { eq, ilike, and, gte, lte, or, desc, count, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { requireAuth, requireAdmin } from "../middlewares/requireAuth";
-import { CreateIncidentBody, UpdateIncidentBody, ListIncidentsQueryParams } from "@workspace/api-zod";
+import { CreateIncidentBody, UpdateIncidentBody, ListIncidentsQueryParams, AddIncidentPersonBody } from "@workspace/api-zod";
 import { logAction } from "../lib/logger-helper";
 import { paramString } from "../lib/params";
 import { isAllowedStatusTransition } from "../lib/incidentWorkflow";
 import { deriveCategory } from "../lib/incidentClassification";
 import { resolveSettledDate } from "../lib/settledDate";
 import { validateReportedDate } from "../lib/reportedDate";
+import { assertCanEditIncident } from "../lib/assertCanEditIncident";
 
 const router = Router();
 
@@ -281,9 +282,8 @@ router.patch("/incidents/:id", requireAuth, async (req, res): Promise<void> => {
     date: incidentsTable.date,
   }).from(incidentsTable).where(eq(incidentsTable.id, id));
   if (!target) { res.status(404).json({ error: "Incident not found" }); return; }
-  const isOwner = target.reportingOfficerId === req.officer!.id;
   const isAdmin = req.officer!.role === "admin";
-  if (!isOwner && !isAdmin) {
+  if (!assertCanEditIncident(target, req.officer!)) {
     res.status(403).json({ error: "Only the reporting officer or an admin can edit this incident" });
     return;
   }
@@ -365,6 +365,105 @@ router.patch("/incidents/:id", requireAuth, async (req, res): Promise<void> => {
     .where(eq(incidentsTable.id, id));
   if (!row) { res.status(404).json({ error: "Incident not found" }); return; }
   res.json(formatIncident(row));
+});
+
+// Incremental link/unlink for the edit form's persons panel — unlike POST
+// /incidents (create-time linking, D3), each call here adds or removes a
+// single (incidentId, personId, role) row against an already-existing
+// incident, so it needs its own existence/permission/conflict handling
+// rather than reusing the transactional create path.
+router.post("/incidents/:id/persons", requireAuth, async (req, res): Promise<void> => {
+  const id = parseInt(paramString(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [incident] = await db.select({
+    reportingOfficerId: incidentsTable.reportingOfficerId,
+  }).from(incidentsTable).where(eq(incidentsTable.id, id));
+  if (!incident) { res.status(404).json({ error: "Incident not found" }); return; }
+
+  const parsed = AddIncidentPersonBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const data = parsed.data;
+
+  // personId lives in the body, not the URL, so it can only be checked once
+  // the body has been parsed — this puts the 400 (malformed body) ahead of
+  // the 404 (unknown person) in practice, unlike the incident-exists check
+  // above, which the URL's :id makes possible before any parsing.
+  const [person] = await db.select().from(personsTable).where(eq(personsTable.id, data.personId));
+  if (!person) { res.status(404).json({ error: "Person not found" }); return; }
+
+  if (!assertCanEditIncident(incident, req.officer!)) {
+    res.status(403).json({ error: "Only the reporting officer or an admin can edit this incident" });
+    return;
+  }
+
+  let link: typeof incidentPersonsTable.$inferSelect;
+  try {
+    [link] = await db.insert(incidentPersonsTable).values({
+      incidentId: id,
+      personId: data.personId,
+      role: data.role,
+      roleDetails: data.roleDetails ?? null,
+    }).returning();
+  } catch (err: any) {
+    // 23505 = unique_violation on incident_persons_incident_person_role_unique
+    // (incidentId, personId, role) — this person is already linked in that role.
+    if (err?.code === "23505") {
+      res.status(409).json({ error: "Person already linked with that role" });
+      return;
+    }
+    throw err;
+  }
+
+  await logAction(
+    req.officer!.id,
+    "LINK_PERSON_TO_INCIDENT",
+    `Linked person id ${data.personId} to incident id ${id} as ${data.role}`,
+  );
+
+  // Same embedded shape GET /incidents/:id uses for its `persons` array
+  // (matches the generated AddIncidentPersonResponse/IncidentPerson schema).
+  res.status(201).json({
+    ...link,
+    createdAt: link.createdAt.toISOString(),
+    person: {
+      ...person,
+      createdAt: person.createdAt.toISOString(),
+      updatedAt: person.updatedAt.toISOString(),
+    },
+  });
+});
+
+router.delete("/incidents/:id/persons/:linkId", requireAuth, async (req, res): Promise<void> => {
+  const id = parseInt(paramString(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const linkId = parseInt(paramString(req.params.linkId), 10);
+  if (isNaN(linkId)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [incident] = await db.select({
+    reportingOfficerId: incidentsTable.reportingOfficerId,
+  }).from(incidentsTable).where(eq(incidentsTable.id, id));
+  if (!incident) { res.status(404).json({ error: "Incident not found" }); return; }
+
+  if (!assertCanEditIncident(incident, req.officer!)) {
+    res.status(403).json({ error: "Only the reporting officer or an admin can edit this incident" });
+    return;
+  }
+
+  // Scoped to incidentId so a linkId that belongs to a different incident
+  // can't be used to unlink a person here — delete+returning also tells us
+  // in one query whether a matching row existed at all, for the 404 below.
+  const [deleted] = await db.delete(incidentPersonsTable)
+    .where(and(eq(incidentPersonsTable.id, linkId), eq(incidentPersonsTable.incidentId, id)))
+    .returning({ personId: incidentPersonsTable.personId });
+  if (!deleted) { res.status(404).json({ error: "Person link not found" }); return; }
+
+  await logAction(
+    req.officer!.id,
+    "UNLINK_PERSON_FROM_INCIDENT",
+    `Unlinked person id ${deleted.personId} from incident id ${id}`,
+  );
+  res.json({ message: "Person unlinked from incident" });
 });
 
 router.delete("/incidents/:id", requireAdmin, async (req, res): Promise<void> => {
