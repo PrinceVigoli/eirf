@@ -3,7 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { officersTable } from "./officers";
 
-export const incidentStatusEnum = pgEnum("incident_status", ["open", "under_investigation", "closed", "archived"]);
+export const incidentStatusEnum = pgEnum("incident_status", ["open", "under_investigation", "settled", "closed", "archived"]);
 // Previously a free-form text column with only a client-side dropdown
 // constraining it — anyone calling the API directly could set an
 // off-list value, silently breaking the "Incidents by Type" dashboard
@@ -12,6 +12,7 @@ export const incidentStatusEnum = pgEnum("incident_status", ["open", "under_inve
 // artifacts/eirf/src/lib/incident-types.ts and
 // lib/api-spec/openapi.yaml's IncidentType schema.
 export const incidentTypeEnum = pgEnum("incident_type", ["Crime", "Accident", "Dispute", "Missing Person", "Other"]);
+export const incidentCategoryEnum = pgEnum("incident_category", ["crime", "non_crime"]);
 
 export const incidentsTable = pgTable("incidents", {
   id: serial("id").primaryKey(),
@@ -26,6 +27,10 @@ export const incidentsTable = pgTable("incidents", {
   witnessStatements: text("witness_statements"),
   evidence: text("evidence"),
   notes: text("notes"),
+  dateReported: text("date_reported"),
+  investigatingOfficerId: integer("investigating_officer_id").references(() => officersTable.id, { onDelete: "set null" }),
+  category: incidentCategoryEnum("category").notNull(),
+  settledDate: text("settled_date"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
