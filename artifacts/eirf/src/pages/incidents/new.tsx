@@ -227,22 +227,39 @@ export default function NewIncident() {
                 <Controller
                   name="investigatingOfficerId"
                   control={form.control}
-                  render={({ field }) => (
-                    <Select
-                      value={field.value == null ? "unassigned" : String(field.value)}
-                      onValueChange={(v) => field.onChange(v === "unassigned" ? null : Number(v))}
-                    >
-                      <SelectTrigger id="investigatingOfficerId"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unassigned">— Unassigned —</SelectItem>
-                        {(officerRoster ?? []).map((officer) => (
-                          <SelectItem key={officer.id} value={String(officer.id)}>
-                            {officer.name} ({officer.rank})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                  render={({ field }) => {
+                    const roster = officerRoster ?? [];
+                    const selected =
+                      field.value == null
+                        ? null
+                        : roster.find((o) => String(o.id) === String(field.value));
+                    return (
+                      <Select
+                        value={field.value == null ? "unassigned" : String(field.value)}
+                        onValueChange={(v) => {
+                          // Guard against spurious empty events Radix can emit
+                          // while the async roster items mount — an unguarded
+                          // Number("") would corrupt the id to 0.
+                          if (v === "unassigned") field.onChange(null);
+                          else if (v && !Number.isNaN(Number(v))) field.onChange(Number(v));
+                        }}
+                      >
+                        <SelectTrigger id="investigatingOfficerId">
+                          <SelectValue>
+                            {selected ? `${selected.name} (${selected.rank})` : "— Unassigned —"}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">— Unassigned —</SelectItem>
+                          {roster.map((officer) => (
+                            <SelectItem key={officer.id} value={String(officer.id)}>
+                              {officer.name} ({officer.rank})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  }}
                 />
               </div>
             </div>

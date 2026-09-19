@@ -160,6 +160,10 @@ export default function EditIncident() {
             linkIdByPersonId.current.set(personId, created.id);
           }
           queryClient.invalidateQueries({ queryKey: getListIncidentPersonsQueryKey(id) });
+          // The incident detail page renders `incident.persons`, which is
+          // backed by this query key, not the persons-list query above —
+          // invalidate both so it doesn't show stale/missing persons.
+          queryClient.invalidateQueries({ queryKey: getGetIncidentQueryKey(id) });
         } catch (err: any) {
           setPersonsInvolved(prev);
           toast({
@@ -205,7 +209,11 @@ export default function EditIncident() {
           setLocation(`/incidents/${id}`);
           return;
         }
-        queryClient.setQueryData(getGetIncidentQueryKey(id), updatedData);
+        // PATCH /incidents/:id's response has no `persons` field (only GET
+        // /incidents/:id joins persons in) — setQueryData(updatedData) would
+        // blindly replace the cached incident and wipe out its persons.
+        // Invalidate instead so the detail page refetches the full record.
+        queryClient.invalidateQueries({ queryKey: getGetIncidentQueryKey(id) });
         setLocation(`/incidents/${id}`);
       },
       onError: (err: any) => {
@@ -285,22 +293,43 @@ export default function EditIncident() {
                 <Controller
                   name="investigatingOfficerId"
                   control={form.control}
-                  render={({ field }) => (
-                    <Select
-                      value={field.value == null ? "unassigned" : String(field.value)}
-                      onValueChange={(v) => field.onChange(v === "unassigned" ? null : Number(v))}
-                    >
-                      <SelectTrigger id="investigatingOfficerId"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unassigned">— Unassigned —</SelectItem>
-                        {(officerRoster ?? []).map((officer) => (
-                          <SelectItem key={officer.id} value={String(officer.id)}>
-                            {officer.name} ({officer.rank})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                  render={({ field }) => {
+                    const roster = officerRoster ?? [];
+                    const selected =
+                      field.value == null
+                        ? null
+                        : roster.find((o) => String(o.id) === String(field.value));
+                    return (
+                      <Select
+                        value={field.value == null ? "unassigned" : String(field.value)}
+                        onValueChange={(v) => {
+                          // Guard against spurious empty events Radix can emit
+                          // while the async roster <SelectItem>s are still
+                          // mounting — an unguarded Number("") would corrupt a
+                          // real officer id to 0 and silently clear it on save.
+                          if (v === "unassigned") field.onChange(null);
+                          else if (v && !Number.isNaN(Number(v))) field.onChange(Number(v));
+                        }}
+                      >
+                        <SelectTrigger id="investigatingOfficerId">
+                          {/* Render the label explicitly: Radix's <SelectValue>
+                              does not reliably resolve a controlled value whose
+                              <SelectItem> mounts after the value is set. */}
+                          <SelectValue>
+                            {selected ? `${selected.name} (${selected.rank})` : "— Unassigned —"}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">— Unassigned —</SelectItem>
+                          {roster.map((officer) => (
+                            <SelectItem key={officer.id} value={String(officer.id)}>
+                              {officer.name} ({officer.rank})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  }}
                 />
               </div>
             </div>
