@@ -8,6 +8,10 @@ import IncidentList from "./pages/incidents/index";
 import NewIncident from "./pages/incidents/new";
 import IncidentDetail from "./pages/incidents/detail";
 import EditIncident from "./pages/incidents/edit";
+import PersonList from "./pages/persons/index";
+import NewPerson from "./pages/persons/new";
+import PersonDetail from "./pages/persons/detail";
+import EditPerson from "./pages/persons/edit";
 import OfficerList from "./pages/officers/index";
 import NewOfficer from "./pages/officers/new";
 import EditOfficer from "./pages/officers/edit";
@@ -55,6 +59,10 @@ function ProtectedApp() {
         <Route path="/incidents/:id/edit" component={EditIncident} />
         <Route path="/incidents/:id" component={IncidentDetail} />
         <Route path="/incidents" component={IncidentList} />
+        <Route path="/persons/new" component={NewPerson} />
+        <Route path="/persons/:id/edit" component={EditPerson} />
+        <Route path="/persons/:id" component={PersonDetail} />
+        <Route path="/persons" component={PersonList} />
         <Route path="/officers/new">{() => <AdminRoute component={NewOfficer} />}</Route>
         <Route path="/officers/:id/edit">{() => <AdminRoute component={EditOfficer} />}</Route>
         <Route path="/officers">{() => <AdminRoute component={OfficerList} />}</Route>

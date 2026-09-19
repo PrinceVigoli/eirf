@@ -2,7 +2,7 @@ import React from "react";
 import { Link, useLocation } from "wouter";
 import {
   ShieldAlert, LayoutDashboard, FileText, FilePlus,
-  Users, Activity, LogOut, Menu, X, KeyRound, Settings
+  Users, Activity, LogOut, Menu, X, KeyRound, Settings, UserSearch
 } from "lucide-react";
 import { useGetMe, useLogout, getGetMeQueryKey } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
@@ -55,6 +55,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { href: "/incidents", label: "Incident Records", icon: FileText },
     { href: "/incidents/new", label: "New Incident", icon: FilePlus },
+    { href: "/persons", label: "Persons", icon: UserSearch },
     ...(isAdmin ? [
       { href: "/officers", label: "Officers Directory", icon: Users },
       { href: "/logs", label: "System Logs", icon: Activity },
