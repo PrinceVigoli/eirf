@@ -87,7 +87,7 @@ router.get("/incidents", requireAuth, async (req, res): Promise<void> => {
     ));
   }
   if (params.type) conditions.push(eq(incidentsTable.type, params.type));
-  if (params.status) conditions.push(eq(incidentsTable.status, params.status as "open" | "under_investigation" | "closed" | "archived"));
+  if (params.status) conditions.push(eq(incidentsTable.status, params.status as "open" | "under_investigation" | "settled" | "closed" | "archived"));
   if (params.startDate) conditions.push(gte(incidentsTable.date, params.startDate));
   if (params.endDate) conditions.push(lte(incidentsTable.date, params.endDate));
   const where = conditions.length > 0 ? and(...conditions) : undefined;
