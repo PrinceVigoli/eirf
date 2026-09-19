@@ -14,7 +14,11 @@ export interface EvidenceFile {
   contentType: string;
   /** @nullable */
   fileSize?: number | null;
-  /** @nullable */
+  /**
+     * SHA-256 fingerprint calculated from the stored file bytes
+     * @nullable
+     * @pattern ^[a-f0-9]{64}$
+     */
   sha256?: string | null;
   /** @nullable */
   uploadedById: number | null;

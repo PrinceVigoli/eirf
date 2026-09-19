@@ -5,7 +5,7 @@
  * e-IRF Electronic Incident Records Form API
  * OpenAPI spec version: 0.1.0
  */
-
+import type { IncidentCategory } from './incidentCategory';
 import type { IncidentStatus } from './incidentStatus';
 import type { IncidentType } from './incidentType';
 
@@ -13,6 +13,7 @@ export type ListIncidentsParams = {
 search?: string;
 type?: IncidentType;
 status?: IncidentStatus;
+category?: IncidentCategory;
 startDate?: string;
 endDate?: string;
 page?: number;

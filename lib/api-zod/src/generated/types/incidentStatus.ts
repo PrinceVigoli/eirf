@@ -12,6 +12,7 @@ export type IncidentStatus = typeof IncidentStatus[keyof typeof IncidentStatus];
 export const IncidentStatus = {
   open: 'open',
   under_investigation: 'under_investigation',
+  settled: 'settled',
   closed: 'closed',
   archived: 'archived',
 } as const;

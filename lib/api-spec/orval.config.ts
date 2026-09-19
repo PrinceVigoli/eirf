@@ -55,6 +55,13 @@ export default defineConfig({
       mode: "split",
       clean: true,
       prettier: true,
+      // The `generated/types` TS interfaces share names with the Zod schema
+      // consts in `generated/api.ts`. Orval's default index-file maintenance
+      // would otherwise auto-append `export * from './generated/types'` to
+      // our hand-written src/index.ts (which intentionally re-exports only
+      // the Zod schemas — see that file's header comment), causing
+      // TS2308 name-collision errors on every codegen run.
+      indexFiles: false,
       override: {
         zod: {
           coerce: {

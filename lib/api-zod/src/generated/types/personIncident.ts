@@ -9,8 +9,9 @@ import type { IncidentCategory } from './incidentCategory';
 import type { IncidentPerson } from './incidentPerson';
 import type { IncidentStatus } from './incidentStatus';
 import type { IncidentType } from './incidentType';
+import type { PersonRole } from './personRole';
 
-export interface Incident {
+export interface PersonIncident {
   id: number;
   incidentNumber: string;
   date: string;
@@ -41,4 +42,7 @@ export interface Incident {
   persons?: IncidentPerson[];
   createdAt: string;
   updatedAt: string;
+  role: PersonRole;
+  /** @nullable */
+  roleDetails?: string | null;
 }

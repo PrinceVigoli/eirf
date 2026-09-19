@@ -20,5 +20,9 @@ export interface IncidentUpdate {
   evidence?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  dateReported?: string | null;
+  /** @nullable */
+  investigatingOfficerId?: number | null;
   status?: IncidentStatus;
 }

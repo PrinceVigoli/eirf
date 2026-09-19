@@ -82,13 +82,14 @@ export interface OfficerUpdate {
 export type IncidentStatus = typeof IncidentStatus[keyof typeof IncidentStatus];
 
 
-/**
- * Was previously `type: string` on every incident interface below — see
- * U4/B4 in the audit. Hand-added here (rather than from a fresh `orval`
- * run) because this archive has no node_modules/lockfile to run codegen;
- * re-run `pnpm --filter @workspace/api-client-react run codegen` (or
- * equivalent) once dependencies are installed.
- */
+export const IncidentStatus = {
+  open: 'open',
+  under_investigation: 'under_investigation',
+  settled: 'settled',
+  closed: 'closed',
+  archived: 'archived',
+} as const;
+
 export type IncidentType = typeof IncidentType[keyof typeof IncidentType];
 
 
@@ -96,16 +97,69 @@ export const IncidentType = {
   Crime: 'Crime',
   Accident: 'Accident',
   Dispute: 'Dispute',
-  'Missing Person': 'Missing Person',
+  Missing_Person: 'Missing Person',
   Other: 'Other',
 } as const;
 
-export const IncidentStatus = {
-  open: 'open',
-  under_investigation: 'under_investigation',
-  closed: 'closed',
-  archived: 'archived',
+export type IncidentCategory = typeof IncidentCategory[keyof typeof IncidentCategory];
+
+
+export const IncidentCategory = {
+  crime: 'crime',
+  non_crime: 'non_crime',
 } as const;
+
+export type PersonRole = typeof PersonRole[keyof typeof PersonRole];
+
+
+export const PersonRole = {
+  victim: 'victim',
+  complainant: 'complainant',
+  suspect: 'suspect',
+  witness: 'witness',
+} as const;
+
+export interface Person {
+  id: number;
+  fullName: string;
+  /** @nullable */
+  alias?: string | null;
+  /** @nullable */
+  dateOfBirth?: string | null;
+  /** @nullable */
+  sex?: string | null;
+  /** @nullable */
+  nationality?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  contactNumber?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  idType?: string | null;
+  /** @nullable */
+  idNumber?: string | null;
+  /** @nullable */
+  occupation?: string | null;
+  /** @nullable */
+  physicalDescription?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IncidentPerson {
+  id: number;
+  incidentId: number;
+  personId: number;
+  role: PersonRole;
+  /** @nullable */
+  roleDetails?: string | null;
+  person: Person;
+  createdAt: string;
+}
 
 export interface Incident {
   id: number;
@@ -126,8 +180,24 @@ export interface Incident {
   evidence?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  dateReported?: string | null;
+  /** @nullable */
+  investigatingOfficerId?: number | null;
+  /** @nullable */
+  investigatingOfficerName?: string | null;
+  category: IncidentCategory;
+  /** @nullable */
+  settledDate?: string | null;
+  persons?: IncidentPerson[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface IncidentPersonInput {
+  personId: number;
+  role: PersonRole;
+  roleDetails?: string;
 }
 
 export interface IncidentInput {
@@ -139,7 +209,10 @@ export interface IncidentInput {
   witnessStatements?: string;
   evidence?: string;
   notes?: string;
+  dateReported?: string;
+  investigatingOfficerId?: number;
   status?: IncidentStatus;
+  personsInvolved?: IncidentPersonInput[];
 }
 
 export interface IncidentUpdate {
@@ -154,6 +227,10 @@ export interface IncidentUpdate {
   evidence?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  dateReported?: string | null;
+  /** @nullable */
+  investigatingOfficerId?: number | null;
   status?: IncidentStatus;
 }
 
@@ -162,6 +239,88 @@ export interface IncidentListResponse {
   total: number;
   page: number;
   limit: number;
+}
+
+export interface PersonInput {
+  fullName: string;
+  alias?: string;
+  dateOfBirth?: string;
+  sex?: string;
+  nationality?: string;
+  address?: string;
+  contactNumber?: string;
+  email?: string;
+  idType?: string;
+  idNumber?: string;
+  occupation?: string;
+  physicalDescription?: string;
+  notes?: string;
+}
+
+export interface PersonUpdate {
+  fullName?: string;
+  alias?: string;
+  dateOfBirth?: string;
+  sex?: string;
+  nationality?: string;
+  address?: string;
+  contactNumber?: string;
+  email?: string;
+  idType?: string;
+  idNumber?: string;
+  occupation?: string;
+  physicalDescription?: string;
+  notes?: string;
+}
+
+export interface PersonIncident {
+  id: number;
+  incidentNumber: string;
+  date: string;
+  time: string;
+  location: string;
+  type: IncidentType;
+  description: string;
+  status: IncidentStatus;
+  /** @nullable */
+  reportingOfficerId?: number | null;
+  /** @nullable */
+  reportingOfficerName?: string | null;
+  /** @nullable */
+  witnessStatements?: string | null;
+  /** @nullable */
+  evidence?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  dateReported?: string | null;
+  /** @nullable */
+  investigatingOfficerId?: number | null;
+  /** @nullable */
+  investigatingOfficerName?: string | null;
+  category: IncidentCategory;
+  /** @nullable */
+  settledDate?: string | null;
+  persons?: IncidentPerson[];
+  createdAt: string;
+  updatedAt: string;
+  role: PersonRole;
+  /** @nullable */
+  roleDetails?: string | null;
+}
+
+export interface PersonListResponse {
+  persons: Person[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface OfficerRosterEntry {
+  id: number;
+  name: string;
+  rank: string;
+  badgeNumber: string;
 }
 
 export interface DashboardStats {
@@ -220,7 +379,11 @@ export interface EvidenceFile {
   contentType: string;
   /** @nullable */
   fileSize?: number | null;
-  /** SHA-256 fingerprint calculated from the stored bytes */
+  /**
+     * SHA-256 fingerprint calculated from the stored file bytes
+     * @nullable
+     * @pattern ^[a-f0-9]{64}$
+     */
   sha256?: string | null;
   /** @nullable */
   uploadedById: number | null;
@@ -247,9 +410,17 @@ export interface LogListResponse {
 export type ListIncidentsParams = {
 search?: string;
 type?: IncidentType;
-status?: string;
+status?: IncidentStatus;
+category?: IncidentCategory;
 startDate?: string;
 endDate?: string;
+page?: number;
+limit?: number;
+};
+
+export type ListPersonsParams = {
+search?: string;
+role?: PersonRole;
 page?: number;
 limit?: number;
 };
@@ -258,3 +429,4 @@ export type ListLogsParams = {
 page?: number;
 limit?: number;
 };
+

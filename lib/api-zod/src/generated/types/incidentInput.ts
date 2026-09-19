@@ -5,6 +5,7 @@
  * e-IRF Electronic Incident Records Form API
  * OpenAPI spec version: 0.1.0
  */
+import type { IncidentPersonInput } from './incidentPersonInput';
 import type { IncidentStatus } from './incidentStatus';
 import type { IncidentType } from './incidentType';
 
@@ -17,5 +18,8 @@ export interface IncidentInput {
   witnessStatements?: string;
   evidence?: string;
   notes?: string;
+  dateReported?: string;
+  investigatingOfficerId?: number;
   status?: IncidentStatus;
+  personsInvolved?: IncidentPersonInput[];
 }
