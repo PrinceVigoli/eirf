@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useListIncidents } from "@workspace/api-client-react";
-import type { IncidentStatus } from "@workspace/api-client-react";
+import type { IncidentStatus, IncidentCategory } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,12 +20,22 @@ import { getStatusColor, getStatusLabel } from "@/lib/incident-status";
 // for "no filter" here and gets translated back to undefined below.
 const STATUS_OPTIONS = ["all", "open", "under_investigation", "settled", "closed", "archived"];
 const TYPE_OPTIONS = ["all", ...INCIDENT_TYPES];
+const CATEGORY_OPTIONS = ["all", "crime", "non_crime"];
+
+// "all" plus the two IncidentCategory values ("crime"/"non_crime") — same
+// "all"-sentinel pattern as STATUS_OPTIONS/TYPE_OPTIONS above (Radix Select
+// disallows an empty-string item value).
+function categoryOptionLabel(category: string): string {
+  if (category === "all") return "All Categories";
+  return category === "crime" ? "Crime" : "Non-Crime";
+}
 
 export default function IncidentList() {
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<IncidentStatus | "">("");
   const [type, setType] = useState<IncidentType | "">("");
+  const [category, setCategory] = useState<IncidentCategory | "">("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
@@ -40,6 +50,7 @@ export default function IncidentList() {
     search: debouncedSearch || undefined,
     status: status || undefined,
     type: type || undefined,
+    category: category || undefined,
     startDate: startDate || undefined,
     endDate: endDate || undefined,
     page,
@@ -91,6 +102,17 @@ export default function IncidentList() {
             <SelectContent>
               {TYPE_OPTIONS.map(t => (
                 <SelectItem key={t} value={t}>{t === "all" ? "All Types" : t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={category || "all"}
+            onValueChange={(v) => { setCategory(v === "all" ? "" : v as IncidentCategory); setPage(1); }}
+          >
+            <SelectTrigger className="w-auto min-w-[10rem]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {CATEGORY_OPTIONS.map(c => (
+                <SelectItem key={c} value={c}>{categoryOptionLabel(c)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -159,7 +181,17 @@ export default function IncidentList() {
                 >
                   <TableCell className="font-mono text-xs text-muted-foreground">{incident.incidentNumber}</TableCell>
                   <TableCell className="whitespace-nowrap">{incident.date}</TableCell>
-                  <TableCell className="font-medium">{incident.type}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <span>{incident.type}</span>
+                      <Badge
+                        variant={incident.category === "crime" ? "destructive" : "outline"}
+                        className="text-[10px] px-1.5 py-0 font-normal"
+                      >
+                        {categoryOptionLabel(incident.category)}
+                      </Badge>
+                    </div>
+                  </TableCell>
                   <TableCell className="max-w-[200px] truncate" title={incident.location}>
                     {incident.location}
                   </TableCell>

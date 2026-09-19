@@ -4,12 +4,24 @@ import { useGetIncident, getGetIncidentQueryKey } from "@workspace/api-client-re
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Printer, Edit, Calendar, MapPin, Tag, User, ShieldAlert, Download } from "lucide-react";
+import { ArrowLeft, Printer, Edit, Calendar, CalendarCheck, MapPin, Tag, User, UserCog, ShieldAlert, Download, CheckCircle2, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { EvidencePanel } from "@/components/evidence-panel";
 import { usePublicSettings } from "@/lib/system-api";
 import { getStatusColor, getStatusLabel } from "@/lib/incident-status";
+import { roleBadgeVariant, roleLabel, type PersonRole } from "@/lib/person-roles";
 import { cn } from "@/lib/utils";
+
+// Groups for the "Persons Involved" card — suspects surfaced first since
+// they're typically the most operationally relevant, then victims,
+// complainants, and witnesses.
+const ROLE_GROUPS: PersonRole[] = ["suspect", "victim", "complainant", "witness"];
+const ROLE_GROUP_LABELS: Record<PersonRole, string> = {
+  suspect: "Suspects",
+  victim: "Victims",
+  complainant: "Complainants",
+  witness: "Witnesses",
+};
 
 export default function IncidentDetail() {
   const params = useParams();
@@ -31,6 +43,11 @@ export default function IncidentDetail() {
   if (!incident) {
     return <div className="text-center p-12 text-muted-foreground">Incident not found.</div>;
   }
+
+  // persons is optional on the wire (older records / partial responses);
+  // default to empty so the grouping below doesn't need repeated `?? []`.
+  const persons = incident.persons ?? [];
+  const categoryLabel = incident.category === "crime" ? "Crime" : "Non-Crime";
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -83,6 +100,50 @@ export default function IncidentDetail() {
             </CardContent>
           </Card>
 
+          {/* No print:hidden here — persons involved stay on the printed report. */}
+          <Card className="shadow-sm">
+            <CardHeader><CardTitle>Persons Involved</CardTitle></CardHeader>
+            <CardContent>
+              {persons.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">No persons linked.</p>
+              ) : (
+                <div className="space-y-4">
+                  {ROLE_GROUPS.map((role) => {
+                    const members = persons.filter((ip) => ip.role === role);
+                    if (members.length === 0) return null;
+                    return (
+                      <div key={role}>
+                        <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-2">
+                          {ROLE_GROUP_LABELS[role]}
+                        </p>
+                        <div className="divide-y">
+                          {members.map((ip) => (
+                            <Link
+                              key={ip.id}
+                              href={`/persons/${ip.personId}`}
+                              className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0 -mx-2 px-2 rounded-md hover:bg-muted/30 transition-colors"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <Badge variant={roleBadgeVariant(ip.role)}>{roleLabel(ip.role)}</Badge>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate">{ip.person.fullName}</p>
+                                  {ip.person.alias && (
+                                    <p className="text-xs text-muted-foreground truncate">{ip.person.alias}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {incident.witnessStatements && (
             <Card className="shadow-sm">
               <CardHeader><CardTitle>Witness Statements</CardTitle></CardHeader>
@@ -122,6 +183,12 @@ export default function IncidentDetail() {
                   {getStatusLabel(incident.status)}
                 </Badge>
               </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">Category</p>
+                <Badge variant={incident.category === "crime" ? "destructive" : "outline"}>
+                  {categoryLabel}
+                </Badge>
+              </div>
               <div className="flex items-start gap-3">
                 <Tag className="w-4 h-4 text-muted-foreground mt-0.5" />
                 <div>
@@ -134,6 +201,13 @@ export default function IncidentDetail() {
                 <div>
                   <p className="text-xs text-muted-foreground">Date & Time</p>
                   <p className="text-sm font-medium">{incident.date} at {incident.time}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <CalendarCheck className="w-4 h-4 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Date Reported</p>
+                  <p className="text-sm font-medium">{incident.dateReported || "Not recorded"}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -150,6 +224,24 @@ export default function IncidentDetail() {
                   <p className="text-sm font-medium">{incident.reportingOfficerName || "Unknown"}</p>
                 </div>
               </div>
+              <div className="flex items-start gap-3">
+                <UserCog className="w-4 h-4 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Investigating Officer</p>
+                  <p className="text-sm font-medium">{incident.investigatingOfficerName || "Unassigned"}</p>
+                </div>
+              </div>
+              {incident.status === "settled" && (
+                <div className="flex items-start gap-3">
+                  {/* settledDate is server-managed (set on transition to "settled")
+                      and read-only here — display only, no edit affordance. */}
+                  <CheckCircle2 className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Settled</p>
+                    <p className="text-sm font-medium">{incident.settledDate || "Not recorded"}</p>
+                  </div>
+                </div>
+              )}
               <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
                 <p>Filed: {format(new Date(incident.createdAt), "MMM d, yyyy HH:mm")}</p>
                 <p>Updated: {format(new Date(incident.updatedAt), "MMM d, yyyy HH:mm")}</p>
