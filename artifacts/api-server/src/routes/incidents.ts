@@ -1,15 +1,16 @@
 import { Router } from "express";
-import { db, incidentsTable, officersTable } from "@workspace/db";
-import { eq, ilike, and, gte, lte, or, desc, count } from "drizzle-orm";
+import { db, incidentsTable, officersTable, incidentPersonsTable, personsTable } from "@workspace/db";
+import { eq, ilike, and, gte, lte, or, desc, count, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { requireAuth, requireAdmin } from "../middlewares/requireAuth";
-import { CreateIncidentBody, UpdateIncidentBody, ListIncidentsQueryParams } from "@workspace/api-zod";
+import { CreateIncidentBody, UpdateIncidentBody, ListIncidentsQueryParams, AddIncidentPersonBody } from "@workspace/api-zod";
 import { logAction } from "../lib/logger-helper";
 import { paramString } from "../lib/params";
 import { isAllowedStatusTransition } from "../lib/incidentWorkflow";
 import { deriveCategory } from "../lib/incidentClassification";
 import { resolveSettledDate } from "../lib/settledDate";
 import { validateReportedDate } from "../lib/reportedDate";
+import { assertCanEditIncident } from "../lib/assertCanEditIncident";
 
 const router = Router();
 
@@ -87,6 +88,9 @@ router.get("/incidents", requireAuth, async (req, res): Promise<void> => {
     ));
   }
   if (params.type) conditions.push(eq(incidentsTable.type, params.type));
+  if (params.category) conditions.push(eq(incidentsTable.category, params.category as "crime" | "non_crime"));
+  if (params.reportingOfficerId) conditions.push(eq(incidentsTable.reportingOfficerId, params.reportingOfficerId));
+  if (params.investigatingOfficerId) conditions.push(eq(incidentsTable.investigatingOfficerId, params.investigatingOfficerId));
   if (params.status) conditions.push(eq(incidentsTable.status, params.status as "open" | "under_investigation" | "settled" | "closed" | "archived"));
   if (params.startDate) conditions.push(gte(incidentsTable.date, params.startDate));
   if (params.endDate) conditions.push(lte(incidentsTable.date, params.endDate));
@@ -105,8 +109,9 @@ router.get("/incidents", requireAuth, async (req, res): Promise<void> => {
 router.post("/incidents", requireAuth, async (req, res): Promise<void> => {
   const parsed = CreateIncidentBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
-  // personsInvolved (person-linking) is handled by a later task — strip it
-  // here so it never reaches `.values()` below (it isn't an incidents column).
+  // personsInvolved isn't an incidents column — pulled out here so `data`
+  // (spread into the insert below) never carries it. Linking now happens
+  // for real below instead of being silently dropped.
   const { personsInvolved, ...data } = parsed.data;
   const today = new Date().toISOString().slice(0, 10);
 
@@ -124,26 +129,73 @@ router.post("/incidents", requireAuth, async (req, res): Promise<void> => {
     if (!investigator) { res.status(400).json({ error: "Investigating officer not found" }); return; }
   }
 
+  // De-duplicate (personId, role) pairs before touching the database — the
+  // incident_persons unique index is on (incidentId, personId, role), so an
+  // untouched duplicate pair in the request would otherwise 23505 on
+  // insert. First occurrence wins if roleDetails differs across dupes.
+  const dedupedLinks: NonNullable<typeof personsInvolved> = [];
+  if (personsInvolved?.length) {
+    const seen = new Set<string>();
+    for (const link of personsInvolved) {
+      const key = `${link.personId}:${link.role}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      dedupedLinks.push(link);
+    }
+
+    // Fail closed: validate every referenced person exists before writing
+    // anything. Without this, an unknown personId would only surface as a
+    // foreign-key error mid-transaction (or, without the transaction below,
+    // could leave an incident row with no links at all).
+    const personIds = Array.from(new Set(dedupedLinks.map((link) => link.personId)));
+    const foundPersons = await db.select({ id: personsTable.id }).from(personsTable)
+      .where(inArray(personsTable.id, personIds));
+    const foundIds = new Set(foundPersons.map((p) => p.id));
+    if (personIds.some((pid) => !foundIds.has(pid))) {
+      res.status(400).json({ error: "Unknown personId in personsInvolved" });
+      return;
+    }
+  }
+
   // incidentNumber has a `-####` random suffix, so on a busy day two
   // requests can collide. Retry with a fresh number a few times rather than
   // failing the whole request on a unique-constraint violation (Postgres
-  // error code 23505).
+  // error code 23505). When there are persons to link, each attempt runs in
+  // its own transaction so a collision — or any failure inserting the links
+  // — rolls back the incident row too, instead of leaving it stranded
+  // without its links.
   const MAX_ATTEMPTS = 5;
   let incident: typeof incidentsTable.$inferSelect | undefined;
   let incidentNumber = "";
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     incidentNumber = generateIncidentNumber();
+    const values = {
+      ...data,
+      incidentNumber,
+      status: data.status ?? "open",
+      reportingOfficerId: req.officer!.id,
+      category,
+      dateReported: data.dateReported ?? today,
+      investigatingOfficerId: data.investigatingOfficerId ?? null,
+      settledDate: resolveSettledDate(data.status ?? "open", null, today),
+    };
     try {
-      [incident] = await db.insert(incidentsTable).values({
-        ...data,
-        incidentNumber,
-        status: data.status ?? "open",
-        reportingOfficerId: req.officer!.id,
-        category,
-        dateReported: data.dateReported ?? today,
-        investigatingOfficerId: data.investigatingOfficerId ?? null,
-        settledDate: resolveSettledDate(data.status ?? "open", null, today),
-      }).returning();
+      if (dedupedLinks.length > 0) {
+        [incident] = await db.transaction(async (tx) => {
+          const [inserted] = await tx.insert(incidentsTable).values(values).returning();
+          await tx.insert(incidentPersonsTable).values(
+            dedupedLinks.map((link) => ({
+              incidentId: inserted.id,
+              personId: link.personId,
+              role: link.role,
+              roleDetails: link.roleDetails ?? null,
+            })),
+          );
+          return [inserted];
+        });
+      } else {
+        [incident] = await db.insert(incidentsTable).values(values).returning();
+      }
       break;
     } catch (err: any) {
       const isCollision = err?.code === "23505" && String(err?.constraint ?? "").includes("incident_number");
@@ -182,7 +234,38 @@ router.get("/incidents/:id", requireAuth, async (req, res): Promise<void> => {
     .leftJoin(investigatingOfficer, eq(incidentsTable.investigatingOfficerId, investigatingOfficer.id))
     .where(eq(incidentsTable.id, id));
   if (!row) { res.status(404).json({ error: "Incident not found" }); return; }
-  res.json(formatIncident(row));
+
+  // Persons are attached on the detail view only (the list endpoint stays
+  // lean, per D3) — shaped to match the generated IncidentPerson schema,
+  // with the same ISO-timestamp convention as formatIncident/formatPerson.
+  // innerJoin (not left) is safe here: incident_persons.person_id is
+  // NOT NULL with an ON DELETE RESTRICT reference to persons, so a link row
+  // always has a person.
+  const personLinks = await db.select({
+    id: incidentPersonsTable.id,
+    incidentId: incidentPersonsTable.incidentId,
+    personId: incidentPersonsTable.personId,
+    role: incidentPersonsTable.role,
+    roleDetails: incidentPersonsTable.roleDetails,
+    createdAt: incidentPersonsTable.createdAt,
+    person: personsTable,
+  })
+    .from(incidentPersonsTable)
+    .innerJoin(personsTable, eq(incidentPersonsTable.personId, personsTable.id))
+    .where(eq(incidentPersonsTable.incidentId, id));
+
+  res.json({
+    ...formatIncident(row),
+    persons: personLinks.map((link) => ({
+      ...link,
+      createdAt: link.createdAt.toISOString(),
+      person: {
+        ...link.person,
+        createdAt: link.person.createdAt.toISOString(),
+        updatedAt: link.person.updatedAt.toISOString(),
+      },
+    })),
+  });
 });
 
 router.patch("/incidents/:id", requireAuth, async (req, res): Promise<void> => {
@@ -202,9 +285,8 @@ router.patch("/incidents/:id", requireAuth, async (req, res): Promise<void> => {
     date: incidentsTable.date,
   }).from(incidentsTable).where(eq(incidentsTable.id, id));
   if (!target) { res.status(404).json({ error: "Incident not found" }); return; }
-  const isOwner = target.reportingOfficerId === req.officer!.id;
   const isAdmin = req.officer!.role === "admin";
-  if (!isOwner && !isAdmin) {
+  if (!assertCanEditIncident(target, req.officer!)) {
     res.status(403).json({ error: "Only the reporting officer or an admin can edit this incident" });
     return;
   }
@@ -260,7 +342,15 @@ router.patch("/incidents/:id", requireAuth, async (req, res): Promise<void> => {
   }
   if (data.status !== undefined) {
     updates.status = data.status;
-    updates.settledDate = resolveSettledDate(data.status, undefined, today);
+    // Only recompute settledDate when status actually changes — the edit
+    // form resubmits the full record (including the unchanged current
+    // status) on every save, and resolveSettledDate("settled", ...) always
+    // returns today. Without this guard, saving any other field on an
+    // already-settled incident would silently overwrite its real settle
+    // date with today's date. Staying settled = settledDate unchanged.
+    if (data.status !== target.status) {
+      updates.settledDate = resolveSettledDate(data.status, undefined, today);
+    }
   }
 
   await db.update(incidentsTable).set(updates).where(eq(incidentsTable.id, id));
@@ -278,6 +368,105 @@ router.patch("/incidents/:id", requireAuth, async (req, res): Promise<void> => {
     .where(eq(incidentsTable.id, id));
   if (!row) { res.status(404).json({ error: "Incident not found" }); return; }
   res.json(formatIncident(row));
+});
+
+// Incremental link/unlink for the edit form's persons panel — unlike POST
+// /incidents (create-time linking, D3), each call here adds or removes a
+// single (incidentId, personId, role) row against an already-existing
+// incident, so it needs its own existence/permission/conflict handling
+// rather than reusing the transactional create path.
+router.post("/incidents/:id/persons", requireAuth, async (req, res): Promise<void> => {
+  const id = parseInt(paramString(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [incident] = await db.select({
+    reportingOfficerId: incidentsTable.reportingOfficerId,
+  }).from(incidentsTable).where(eq(incidentsTable.id, id));
+  if (!incident) { res.status(404).json({ error: "Incident not found" }); return; }
+
+  const parsed = AddIncidentPersonBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const data = parsed.data;
+
+  // personId lives in the body, not the URL, so it can only be checked once
+  // the body has been parsed — this puts the 400 (malformed body) ahead of
+  // the 404 (unknown person) in practice, unlike the incident-exists check
+  // above, which the URL's :id makes possible before any parsing.
+  const [person] = await db.select().from(personsTable).where(eq(personsTable.id, data.personId));
+  if (!person) { res.status(404).json({ error: "Person not found" }); return; }
+
+  if (!assertCanEditIncident(incident, req.officer!)) {
+    res.status(403).json({ error: "Only the reporting officer or an admin can edit this incident" });
+    return;
+  }
+
+  let link: typeof incidentPersonsTable.$inferSelect;
+  try {
+    [link] = await db.insert(incidentPersonsTable).values({
+      incidentId: id,
+      personId: data.personId,
+      role: data.role,
+      roleDetails: data.roleDetails ?? null,
+    }).returning();
+  } catch (err: any) {
+    // 23505 = unique_violation on incident_persons_incident_person_role_unique
+    // (incidentId, personId, role) — this person is already linked in that role.
+    if (err?.code === "23505") {
+      res.status(409).json({ error: "Person already linked with that role" });
+      return;
+    }
+    throw err;
+  }
+
+  await logAction(
+    req.officer!.id,
+    "LINK_PERSON_TO_INCIDENT",
+    `Linked person id ${data.personId} to incident id ${id} as ${data.role}`,
+  );
+
+  // Same embedded shape GET /incidents/:id uses for its `persons` array
+  // (matches the generated AddIncidentPersonResponse/IncidentPerson schema).
+  res.status(201).json({
+    ...link,
+    createdAt: link.createdAt.toISOString(),
+    person: {
+      ...person,
+      createdAt: person.createdAt.toISOString(),
+      updatedAt: person.updatedAt.toISOString(),
+    },
+  });
+});
+
+router.delete("/incidents/:id/persons/:linkId", requireAuth, async (req, res): Promise<void> => {
+  const id = parseInt(paramString(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const linkId = parseInt(paramString(req.params.linkId), 10);
+  if (isNaN(linkId)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [incident] = await db.select({
+    reportingOfficerId: incidentsTable.reportingOfficerId,
+  }).from(incidentsTable).where(eq(incidentsTable.id, id));
+  if (!incident) { res.status(404).json({ error: "Incident not found" }); return; }
+
+  if (!assertCanEditIncident(incident, req.officer!)) {
+    res.status(403).json({ error: "Only the reporting officer or an admin can edit this incident" });
+    return;
+  }
+
+  // Scoped to incidentId so a linkId that belongs to a different incident
+  // can't be used to unlink a person here — delete+returning also tells us
+  // in one query whether a matching row existed at all, for the 404 below.
+  const [deleted] = await db.delete(incidentPersonsTable)
+    .where(and(eq(incidentPersonsTable.id, linkId), eq(incidentPersonsTable.incidentId, id)))
+    .returning({ personId: incidentPersonsTable.personId });
+  if (!deleted) { res.status(404).json({ error: "Person link not found" }); return; }
+
+  await logAction(
+    req.officer!.id,
+    "UNLINK_PERSON_FROM_INCIDENT",
+    `Unlinked person id ${deleted.personId} from incident id ${id}`,
+  );
+  res.json({ message: "Person unlinked from incident" });
 });
 
 router.delete("/incidents/:id", requireAdmin, async (req, res): Promise<void> => {

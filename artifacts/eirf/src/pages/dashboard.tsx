@@ -16,6 +16,7 @@ import {
 import { FileText, Clock, CheckCircle2, AlertTriangle, ArrowRight, Shield } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { getStatusColor, getStatusLabel } from "@/lib/incident-status";
+import { categoryForType } from "@/lib/incident-types";
 import { cn } from "@/lib/utils";
 
 const PIE_COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
@@ -42,6 +43,19 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  // Crime vs Non-Crime split, folded client-side from the existing by-type
+  // counts via categoryForType — no dedicated endpoint for this.
+  const categoryData = [
+    {
+      category: "Crime",
+      count: typeData.reduce((sum, t) => sum + (categoryForType(t.type) === "crime" ? t.count : 0), 0),
+    },
+    {
+      category: "Non-Crime",
+      count: typeData.reduce((sum, t) => sum + (categoryForType(t.type) === "non_crime" ? t.count : 0), 0),
+    },
+  ];
 
   const statCards = [
     { title: "Total Incidents", value: stats.totalIncidents, icon: FileText, color: "text-blue-500", bg: "bg-blue-100 dark:bg-blue-900/20" },
@@ -84,7 +98,7 @@ export default function Dashboard() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <Card className="lg:col-span-2 shadow-sm">
           <CardHeader>
             <CardTitle>Incidents by Month</CardTitle>
@@ -102,19 +116,28 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
+        <Card className="lg:col-span-2 shadow-sm">
           <CardHeader>
-            <CardTitle>Incidents by Type</CardTitle>
-            <CardDescription>Current distribution</CardDescription>
+            <CardTitle>Crime vs Non-Crime</CardTitle>
+            <CardDescription>Category split</CardDescription>
           </CardHeader>
           <CardContent>
-            {typeData.length === 0 ? (
+            {categoryData.every((d) => d.count === 0) ? (
               <div className="flex items-center justify-center h-60 text-muted-foreground text-sm">No data</div>
             ) : (
               <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
-                  <Pie data={typeData} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={80} label={({ type }) => type}>
-                    {typeData.map((_, index) => (
+                  <Pie
+                    data={categoryData}
+                    dataKey="count"
+                    nameKey="category"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    label={({ category }) => category}
+                  >
+                    {categoryData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                     ))}
                   </Pie>

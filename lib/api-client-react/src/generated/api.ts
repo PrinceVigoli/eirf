@@ -50,6 +50,7 @@ import type {
   PersonInput,
   PersonListResponse,
   PersonUpdate,
+  UpdateMyProfileInput,
   UploadUrlRequest,
   UploadUrlResponse
 } from './api.schemas';
@@ -446,6 +447,77 @@ export const useChangePassword = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getChangePasswordMutationOptions(options));
+    }
+
+export const getUpdateMyProfileUrl = () => {
+
+
+
+
+  return `/api/auth/me/profile`
+}
+
+/**
+ * @summary Update own profile photos (avatar and/or cover)
+ */
+export const updateMyProfile = async (updateMyProfileInput: UpdateMyProfileInput, options?: RequestInit): Promise<Officer> => {
+
+  return customFetch<Officer>(getUpdateMyProfileUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateMyProfileInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateMyProfileMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMyProfile>>, TError,{data: BodyType<UpdateMyProfileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMyProfile>>, TError,{data: BodyType<UpdateMyProfileInput>}, TContext> => {
+
+const mutationKey = ['updateMyProfile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMyProfile>>, {data: BodyType<UpdateMyProfileInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateMyProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMyProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateMyProfile>>>
+    export type UpdateMyProfileMutationBody = BodyType<UpdateMyProfileInput>
+    export type UpdateMyProfileMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Update own profile photos (avatar and/or cover)
+ */
+export const useUpdateMyProfile = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMyProfile>>, TError,{data: BodyType<UpdateMyProfileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMyProfile>>,
+        TError,
+        {data: BodyType<UpdateMyProfileInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateMyProfileMutationOptions(options));
     }
 
 export const getListIncidentsUrl = (params?: ListIncidentsParams,) => {

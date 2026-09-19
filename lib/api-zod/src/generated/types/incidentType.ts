@@ -11,8 +11,5 @@ export type IncidentType = typeof IncidentType[keyof typeof IncidentType];
 
 export const IncidentType = {
   Crime: 'Crime',
-  Accident: 'Accident',
-  Dispute: 'Dispute',
-  Missing_Person: 'Missing Person',
-  Other: 'Other',
+  'Non-Crime': 'Non-Crime',
 } as const;

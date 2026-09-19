@@ -1,9 +1,17 @@
 import { Router } from "express";
 import { db, incidentsTable, officersTable } from "@workspace/db";
 import { eq, count, gte, sql, desc } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router = Router();
+
+// Self-join alias: incidents references officers twice (reportingOfficerId,
+// investigatingOfficerId), so the investigating side needs its own aliased
+// table to join against without colliding with the reporting-officer join.
+// Mirrors incidents.ts's incidentSelect (kept as a separate local copy here —
+// see D6 scoping note, extraction into a shared module is deferred).
+const investigatingOfficer = alias(officersTable, "investigating_officer");
 
 const incidentSelect = {
   id: incidentsTable.id,
@@ -18,6 +26,11 @@ const incidentSelect = {
   witnessStatements: incidentsTable.witnessStatements,
   evidence: incidentsTable.evidence,
   notes: incidentsTable.notes,
+  dateReported: incidentsTable.dateReported,
+  investigatingOfficerId: incidentsTable.investigatingOfficerId,
+  investigatingOfficerName: investigatingOfficer.name,
+  category: incidentsTable.category,
+  settledDate: incidentsTable.settledDate,
   createdAt: incidentsTable.createdAt,
   updatedAt: incidentsTable.updatedAt,
   reportingOfficerName: officersTable.name,
@@ -72,6 +85,7 @@ router.get("/dashboard/by-month", requireAuth, async (req, res): Promise<void> =
 router.get("/dashboard/recent", requireAuth, async (req, res): Promise<void> => {
   const rows = await db.select(incidentSelect).from(incidentsTable)
     .leftJoin(officersTable, eq(incidentsTable.reportingOfficerId, officersTable.id))
+    .leftJoin(investigatingOfficer, eq(incidentsTable.investigatingOfficerId, investigatingOfficer.id))
     .orderBy(desc(incidentsTable.createdAt))
     .limit(10);
   res.json(rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString() })));

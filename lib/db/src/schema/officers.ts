@@ -13,6 +13,10 @@ export const officersTable = pgTable("officers", {
   username: text("username").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   sessionVersion: integer("session_version").notNull().default(0),
+  // Self-service profile photos (object-storage paths, e.g. /objects/<uuid>);
+  // null when the officer hasn't uploaded one. See migration 0006.
+  avatarUrl: text("avatar_url"),
+  coverUrl: text("cover_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

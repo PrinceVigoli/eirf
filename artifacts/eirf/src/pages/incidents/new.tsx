@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useAddEvidenceFile, useCreateIncident } from "@workspace/api-client-react";
+import { useAddEvidenceFile, useCreateIncident, useListOfficerRoster } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,15 @@ import { ArrowLeft, Paperclip, Save, X } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { INCIDENT_TYPES } from "@/lib/incident-types";
+import { PersonsInvolvedField, type PersonInvolved } from "@/components/persons-involved-field";
 
 const schema = z.object({
   date: z.string().min(1, "Date is required"),
   time: z.string().min(1, "Time is required"),
+  // Distinct from `date` (when the incident happened) — when the report was
+  // *filed*. Server defaults/validates this too (reportedDate.ts), but a
+  // required field here means the officer sees the same default up front.
+  dateReported: z.string().min(1, "Date reported is required"),
   location: z.string().min(3, "Location must be at least 3 characters"),
   // Constrained to the same enum the server now enforces (see U4/B4) — a
   // free-form string here could previously drift from what the API/DB
@@ -28,7 +33,17 @@ const schema = z.object({
   witnessStatements: z.string().optional(),
   evidence: z.string().optional(),
   notes: z.string().optional(),
-  status: z.enum(['open', 'under_investigation', 'closed', 'archived']).default('open'),
+  // "settled" is a valid status an officer can file/mark directly. The
+  // server derives settledDate itself (resolveSettledDate() in
+  // artifacts/api-server/src/lib/settledDate.ts stamps "today" the moment
+  // status becomes "settled") — settledDate is intentionally absent from
+  // IncidentInput/IncidentUpdate, so there is no client field to collect or
+  // submit for it here.
+  status: z.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']).default('open'),
+  // Optional; "unassigned" is represented as null in form state (Radix
+  // Select can't hold an empty-string value) and dropped to `undefined`
+  // before it reaches IncidentInput, which has no null variant on create.
+  investigatingOfficerId: z.number().nullable().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -40,21 +55,27 @@ export default function NewIncident() {
   const { uploadFile, isUploading, progress } = useUpload();
   const { toast } = useToast();
   const [files, setFiles] = React.useState<File[]>([]);
+  const [personsInvolved, setPersonsInvolved] = React.useState<PersonInvolved[]>([]);
+  const { data: officerRoster } = useListOfficerRoster();
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       date: format(new Date(), 'yyyy-MM-dd'),
       time: format(new Date(), 'HH:mm'),
+      dateReported: format(new Date(), 'yyyy-MM-dd'),
       location: "",
       type: "Crime",
       description: "",
       witnessStatements: "",
       evidence: "",
       notes: "",
-      status: "open"
+      status: "open",
+      investigatingOfficerId: null,
     }
   });
+
+  const status = form.watch("status");
 
   const onSubmit = async (data: FormData) => {
     if (files.length > 0 && !navigator.onLine) {
@@ -66,7 +87,16 @@ export default function NewIncident() {
       return;
     }
     try {
-      const incident: any = await createIncident.mutateAsync({ data });
+      // "Unassigned" investigator comes in as null (Select sentinel) but
+      // IncidentInput's field is `number | undefined` only (no null variant
+      // on create), so normalize it here rather than in form state.
+      const { investigatingOfficerId, ...rest } = data;
+      const payload = {
+        ...rest,
+        investigatingOfficerId: investigatingOfficerId ?? undefined,
+        personsInvolved: personsInvolved.map((person) => ({ personId: person.personId, role: person.role })),
+      };
+      const incident: any = await createIncident.mutateAsync({ data: payload });
         // While offline, the service worker intercepts this POST and returns
         // a synthetic `{ queued: true }` response instead of a real created
         // incident — there is no id yet because the record hasn't reached
@@ -151,7 +181,7 @@ export default function NewIncident() {
             <CardDescription>Primary facts of the incident</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="date">Date of Incident *</Label>
                 <Input type="date" id="date" {...form.register("date")} />
@@ -161,6 +191,11 @@ export default function NewIncident() {
                 <Label htmlFor="time">Time of Incident *</Label>
                 <Input type="time" id="time" {...form.register("time")} />
                 {form.formState.errors.time && <p className="text-sm text-destructive">{form.formState.errors.time.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dateReported">Date Reported *</Label>
+                <Input type="date" id="dateReported" {...form.register("dateReported")} />
+                {form.formState.errors.dateReported && <p className="text-sm text-destructive">{form.formState.errors.dateReported.message}</p>}
               </div>
             </div>
 
@@ -183,7 +218,50 @@ export default function NewIncident() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="status">Initial Status</Label>
+                <Label htmlFor="investigatingOfficerId">Investigating Officer</Label>
+                <Controller
+                  name="investigatingOfficerId"
+                  control={form.control}
+                  render={({ field }) => {
+                    const roster = officerRoster ?? [];
+                    const selected =
+                      field.value == null
+                        ? null
+                        : roster.find((o) => String(o.id) === String(field.value));
+                    return (
+                      <Select
+                        value={field.value == null ? "unassigned" : String(field.value)}
+                        onValueChange={(v) => {
+                          // Guard against spurious empty events Radix can emit
+                          // while the async roster items mount — an unguarded
+                          // Number("") would corrupt the id to 0.
+                          if (v === "unassigned") field.onChange(null);
+                          else if (v && !Number.isNaN(Number(v))) field.onChange(Number(v));
+                        }}
+                      >
+                        <SelectTrigger id="investigatingOfficerId">
+                          <SelectValue>
+                            {selected ? `${selected.name} (${selected.rank})` : "— Unassigned —"}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">— Unassigned —</SelectItem>
+                          {roster.map((officer) => (
+                            <SelectItem key={officer.id} value={String(officer.id)}>
+                              {officer.name} ({officer.rank})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
                 <Controller
                   name="status"
                   control={form.control}
@@ -193,11 +271,15 @@ export default function NewIncident() {
                       <SelectContent>
                         <SelectItem value="open">Open</SelectItem>
                         <SelectItem value="under_investigation">Under Investigation</SelectItem>
+                        <SelectItem value="settled">Settled</SelectItem>
                         <SelectItem value="closed">Closed</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
                 />
+                {status === "settled" && (
+                  <p className="text-xs text-muted-foreground">Settled date is recorded automatically.</p>
+                )}
               </div>
             </div>
 
@@ -212,6 +294,21 @@ export default function NewIncident() {
               <Textarea id="description" placeholder="Provide a detailed factual account..." className="min-h-[150px]" {...form.register("description")} />
               {form.formState.errors.description && <p className="text-sm text-destructive">{form.formState.errors.description.message}</p>}
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm mt-6">
+          <CardHeader>
+            <CardTitle>Persons Involved</CardTitle>
+            <CardDescription>Link victims, complainants, suspects, and witnesses to this incident.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PersonsInvolvedField
+              value={personsInvolved}
+              onChange={setPersonsInvolved}
+              label={null}
+              description={null}
+            />
           </CardContent>
         </Card>
 

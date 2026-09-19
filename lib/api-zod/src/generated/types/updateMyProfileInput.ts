@@ -5,18 +5,10 @@
  * e-IRF Electronic Incident Records Form API
  * OpenAPI spec version: 0.1.0
  */
-import type { OfficerRole } from './officerRole';
 
-export interface Officer {
-  id: number;
-  name: string;
-  badgeNumber: string;
-  rank: string;
-  role: OfficerRole;
-  username: string;
+export interface UpdateMyProfileInput {
   /** @nullable */
   avatarUrl?: string | null;
   /** @nullable */
   coverUrl?: string | null;
-  createdAt: string;
 }

@@ -12,6 +12,8 @@ declare global {
         rank: string;
         role: "admin" | "officer";
         username: string;
+        avatarUrl: string | null;
+        coverUrl: string | null;
         createdAt: Date;
       };
     }
@@ -44,6 +46,8 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     rank: officer.rank,
     role: officer.role,
     username: officer.username,
+    avatarUrl: officer.avatarUrl,
+    coverUrl: officer.coverUrl,
     createdAt: officer.createdAt,
   };
   next();
