@@ -1,8 +1,8 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
 import {
-  ShieldAlert, LayoutDashboard, FileText, FilePlus,
-  Users, Activity, LogOut, Menu, X, KeyRound, Settings, UserSearch
+  LayoutDashboard, FileText, FilePlus,
+  Users, Activity, LogOut, Menu, X, Settings, UserSearch
 } from "lucide-react";
 import { useGetMe, useLogout, getGetMeQueryKey } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
@@ -68,7 +68,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 border-b bg-sidebar text-sidebar-foreground print:hidden">
         <div className="flex items-center gap-2 font-bold text-lg">
-          <ShieldAlert className="h-6 w-6" />
+          <div className="bg-white rounded p-0.5 shrink-0">
+            <img
+              src={`${import.meta.env.BASE_URL}pnp-logo.jpg`}
+              alt="Philippine National Police"
+              className="h-7 w-7 object-contain"
+            />
+          </div>
           <span>e-IRF</span>
         </div>
         <Button variant="ghost" size="icon" onClick={() => setIsMobileOpen(!isMobileOpen)} className="text-white hover:text-white/80 hover:bg-white/10">
@@ -83,14 +89,36 @@ export function Layout({ children }: { children: React.ReactNode }) {
         isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
         <div className="p-6 flex items-center gap-3 border-b border-sidebar-border">
-          <div className="bg-sidebar-primary text-sidebar-primary-foreground p-1.5 rounded-md">
-            <ShieldAlert className="h-6 w-6" />
+          <div className="bg-white rounded-md p-1 shrink-0">
+            <img
+              src={`${import.meta.env.BASE_URL}pnp-logo.jpg`}
+              alt="Philippine National Police"
+              className="h-11 w-11 object-contain"
+            />
           </div>
           <div>
             <h1 className="font-bold text-lg leading-tight tracking-tight">{station?.stationShortName ?? "Police Station"}</h1>
             <p className="text-xs text-sidebar-foreground/70 uppercase font-semibold tracking-wider">Command Center</p>
           </div>
         </div>
+
+        {/* Signed-in officer — quick access to their profile, above the nav */}
+        <Link href="/profile" onClick={() => setIsMobileOpen(false)}>
+          <div className={cn(
+            "flex items-center gap-3 px-4 py-3 border-b border-sidebar-border transition-colors cursor-pointer",
+            location === "/profile"
+              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+              : "hover:bg-sidebar-accent/50"
+          )}>
+            <div className="h-9 w-9 rounded-full bg-sidebar-primary text-sidebar-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">
+              {user.name.charAt(0)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold truncate">{user.name}</p>
+              <p className="text-xs text-sidebar-foreground/60 capitalize">View profile · {user.rank}</p>
+            </div>
+          </div>
+        </Link>
 
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
@@ -113,26 +141,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="p-4 border-t border-sidebar-border mt-auto">
-          <div className="flex items-center gap-3 px-3 py-2 mb-4">
-            <div className="h-8 w-8 rounded-full bg-sidebar-accent flex items-center justify-center text-xs font-bold text-sidebar-accent-foreground">
-              {user.name.charAt(0)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate">{user.name}</p>
-              <p className="text-xs text-sidebar-foreground/60 capitalize">{user.rank} · {user.role}</p>
-            </div>
-          </div>
-          <Link href="/profile" onClick={() => setIsMobileOpen(false)}>
-            <div className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer mb-1",
-              location === "/profile"
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-            )}>
-              <KeyRound className="h-4 w-4" />
-              Change Password
-            </div>
-          </Link>
           <Button
             variant="ghost"
             className="w-full justify-start text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"

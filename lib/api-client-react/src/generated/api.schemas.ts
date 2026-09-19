@@ -37,6 +37,10 @@ export interface Officer {
   rank: string;
   role: OfficerRole;
   username: string;
+  /** @nullable */
+  avatarUrl?: string | null;
+  /** @nullable */
+  coverUrl?: string | null;
   createdAt: string;
 }
 
@@ -59,6 +63,13 @@ export const OfficerUpdateRole = {
   admin: 'admin',
   officer: 'officer',
 } as const;
+
+export interface UpdateMyProfileInput {
+  /** @nullable */
+  avatarUrl?: string | null;
+  /** @nullable */
+  coverUrl?: string | null;
+}
 
 export interface OfficerInput {
   name: string;
@@ -95,10 +106,7 @@ export type IncidentType = typeof IncidentType[keyof typeof IncidentType];
 
 export const IncidentType = {
   Crime: 'Crime',
-  Accident: 'Accident',
-  Dispute: 'Dispute',
-  Missing_Person: 'Missing Person',
-  Other: 'Other',
+  'Non-Crime': 'Non-Crime',
 } as const;
 
 export type IncidentCategory = typeof IncidentCategory[keyof typeof IncidentCategory];
@@ -412,6 +420,14 @@ search?: string;
 type?: IncidentType;
 status?: IncidentStatus;
 category?: IncidentCategory;
+/**
+ * Only incidents filed by this officer (used by the officer profile page).
+ */
+reportingOfficerId?: number;
+/**
+ * Only incidents assigned to this investigating officer (used by the officer profile page).
+ */
+investigatingOfficerId?: number;
 startDate?: string;
 endDate?: string;
 page?: number;

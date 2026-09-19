@@ -14,6 +14,14 @@ search?: string;
 type?: IncidentType;
 status?: IncidentStatus;
 category?: IncidentCategory;
+/**
+ * Only incidents filed by this officer (used by the officer profile page).
+ */
+reportingOfficerId?: number;
+/**
+ * Only incidents assigned to this investigating officer (used by the officer profile page).
+ */
+investigatingOfficerId?: number;
 startDate?: string;
 endDate?: string;
 page?: number;

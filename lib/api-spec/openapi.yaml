@@ -124,6 +124,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /auth/me/profile:
+    patch:
+      operationId: updateMyProfile
+      tags: [auth]
+      summary: Update own profile photos (avatar and/or cover)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMyProfileInput"
+      responses:
+        "200":
+          description: Updated current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Officer"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /incidents:
     get:
       operationId: listIncidents
@@ -146,6 +177,16 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/IncidentCategory"
+        - name: reportingOfficerId
+          in: query
+          description: Only incidents filed by this officer (used by the officer profile page).
+          schema:
+            type: integer
+        - name: investigatingOfficerId
+          in: query
+          description: Only incidents assigned to this investigating officer (used by the officer profile page).
+          schema:
+            type: integer
         - name: startDate
           in: query
           schema:
@@ -799,8 +840,23 @@ components:
           $ref: "#/components/schemas/OfficerRole"
         username:
           type: string
+        avatarUrl:
+          type: ["string", "null"]
+        coverUrl:
+          type: ["string", "null"]
         createdAt:
           type: string
+
+    # Self-service profile photo update (PATCH /auth/me/profile). Both fields
+    # are optional: send only the one(s) being changed. A string sets the
+    # object-storage path; null clears that photo.
+    UpdateMyProfileInput:
+      type: object
+      properties:
+        avatarUrl:
+          type: ["string", "null"]
+        coverUrl:
+          type: ["string", "null"]
 
     OfficerInput:
       type: object
@@ -851,7 +907,7 @@ components:
     # artifacts/eirf/src/lib/incident-types.ts.
     IncidentType:
       type: string
-      enum: [Crime, Accident, Dispute, "Missing Person", Other]
+      enum: [Crime, "Non-Crime"]
 
     # Server-derived from `type` (never client-set): Crime -> "crime",
     # everything else -> "non_crime". Keep in sync with

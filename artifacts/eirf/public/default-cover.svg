@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Police cover banner">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="0.55" stop-color="#16233d"/>
+      <stop offset="1" stop-color="#0b1220"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.8" cy="0.3" r="0.7">
+      <stop offset="0" stop-color="#3b5bdb" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#3b5bdb" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f4c430"/>
+      <stop offset="1" stop-color="#e0a800"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bg)"/>
+  <rect width="1200" height="300" fill="url(#glow)"/>
+
+  <!-- Philippine sun motif (right side), subtle -->
+  <g transform="translate(960,150)" opacity="0.18">
+    <g fill="url(#gold)">
+      <circle r="42"/>
+      <g>
+        <rect x="-4" y="-96" width="8" height="46" rx="3"/>
+        <rect x="-4" y="50" width="8" height="46" rx="3"/>
+        <rect x="-96" y="-4" width="46" height="8" rx="3"/>
+        <rect x="50" y="-4" width="46" height="8" rx="3"/>
+      </g>
+      <g transform="rotate(45)">
+        <rect x="-4" y="-96" width="8" height="46" rx="3"/>
+        <rect x="-4" y="50" width="8" height="46" rx="3"/>
+        <rect x="-96" y="-4" width="46" height="8" rx="3"/>
+        <rect x="50" y="-4" width="46" height="8" rx="3"/>
+      </g>
+    </g>
+    <!-- three stars -->
+    <g fill="url(#gold)" transform="translate(0,-150)">
+      <path d="M-150 0 l4 12 12 0 -10 8 4 12 -10 -7 -10 7 4 -12 -10 -8 12 0z"/>
+      <path d="M0 -8 l4 12 12 0 -10 8 4 12 -10 -7 -10 7 4 -12 -10 -8 12 0z"/>
+      <path d="M150 0 l4 12 12 0 -10 8 4 12 -10 -7 -10 7 4 -12 -10 -8 12 0z"/>
+    </g>
+  </g>
+
+  <!-- faint shield watermark, far right -->
+  <g transform="translate(1120,150)" opacity="0.10">
+    <path d="M0 -70 L60 -45 L60 20 Q60 70 0 95 Q-60 70 -60 20 L-60 -45 Z" fill="none" stroke="#ffffff" stroke-width="5"/>
+  </g>
+
+  <!-- gold baseline accent -->
+  <rect x="0" y="292" width="1200" height="8" fill="url(#gold)" opacity="0.85"/>
+</svg>

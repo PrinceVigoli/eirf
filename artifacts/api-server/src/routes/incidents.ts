@@ -88,6 +88,9 @@ router.get("/incidents", requireAuth, async (req, res): Promise<void> => {
     ));
   }
   if (params.type) conditions.push(eq(incidentsTable.type, params.type));
+  if (params.category) conditions.push(eq(incidentsTable.category, params.category as "crime" | "non_crime"));
+  if (params.reportingOfficerId) conditions.push(eq(incidentsTable.reportingOfficerId, params.reportingOfficerId));
+  if (params.investigatingOfficerId) conditions.push(eq(incidentsTable.investigatingOfficerId, params.investigatingOfficerId));
   if (params.status) conditions.push(eq(incidentsTable.status, params.status as "open" | "under_investigation" | "settled" | "closed" | "archived"));
   if (params.startDate) conditions.push(gte(incidentsTable.date, params.startDate));
   if (params.endDate) conditions.push(lte(incidentsTable.date, params.endDate));

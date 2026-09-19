@@ -32,6 +32,8 @@ export const LoginResponse = zod.object({
   "rank": zod.string(),
   "role": zod.enum(['admin', 'officer']),
   "username": zod.string(),
+  "avatarUrl": zod.string().nullish(),
+  "coverUrl": zod.string().nullish(),
   "createdAt": zod.string()
 })
 })
@@ -55,6 +57,8 @@ export const GetMeResponse = zod.object({
   "rank": zod.string(),
   "role": zod.enum(['admin', 'officer']),
   "username": zod.string(),
+  "avatarUrl": zod.string().nullish(),
+  "coverUrl": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -77,13 +81,36 @@ export const ChangePasswordResponse = zod.object({
 
 
 /**
+ * @summary Update own profile photos (avatar and/or cover)
+ */
+export const UpdateMyProfileBody = zod.object({
+  "avatarUrl": zod.string().nullish(),
+  "coverUrl": zod.string().nullish()
+})
+
+export const UpdateMyProfileResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "badgeNumber": zod.string(),
+  "rank": zod.string(),
+  "role": zod.enum(['admin', 'officer']),
+  "username": zod.string(),
+  "avatarUrl": zod.string().nullish(),
+  "coverUrl": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary List incidents
  */
 export const ListIncidentsQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
-  "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']).optional(),
+  "type": zod.enum(['Crime', 'Non-Crime']).optional(),
   "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']).optional(),
   "category": zod.enum(['crime', 'non_crime']).optional(),
+  "reportingOfficerId": zod.coerce.number().optional().describe('Only incidents filed by this officer (used by the officer profile page).'),
+  "investigatingOfficerId": zod.coerce.number().optional().describe('Only incidents assigned to this investigating officer (used by the officer profile page).'),
   "startDate": zod.coerce.string().optional(),
   "endDate": zod.coerce.string().optional(),
   "page": zod.coerce.number().optional(),
@@ -97,7 +124,7 @@ export const ListIncidentsResponse = zod.object({
   "date": zod.string(),
   "time": zod.string(),
   "location": zod.string(),
-  "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']),
+  "type": zod.enum(['Crime', 'Non-Crime']),
   "description": zod.string(),
   "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']),
   "reportingOfficerId": zod.number().nullish(),
@@ -152,7 +179,7 @@ export const CreateIncidentBody = zod.object({
   "date": zod.string(),
   "time": zod.string(),
   "location": zod.string(),
-  "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']),
+  "type": zod.enum(['Crime', 'Non-Crime']),
   "description": zod.string(),
   "witnessStatements": zod.string().optional(),
   "evidence": zod.string().optional(),
@@ -173,7 +200,7 @@ export const CreateIncidentResponse = zod.object({
   "date": zod.string(),
   "time": zod.string(),
   "location": zod.string(),
-  "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']),
+  "type": zod.enum(['Crime', 'Non-Crime']),
   "description": zod.string(),
   "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']),
   "reportingOfficerId": zod.number().nullish(),
@@ -230,7 +257,7 @@ export const GetIncidentResponse = zod.object({
   "date": zod.string(),
   "time": zod.string(),
   "location": zod.string(),
-  "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']),
+  "type": zod.enum(['Crime', 'Non-Crime']),
   "description": zod.string(),
   "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']),
   "reportingOfficerId": zod.number().nullish(),
@@ -285,7 +312,7 @@ export const UpdateIncidentBody = zod.object({
   "date": zod.string().optional(),
   "time": zod.string().optional(),
   "location": zod.string().optional(),
-  "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']).optional(),
+  "type": zod.enum(['Crime', 'Non-Crime']).optional(),
   "description": zod.string().optional(),
   "witnessStatements": zod.string().nullish(),
   "evidence": zod.string().nullish(),
@@ -301,7 +328,7 @@ export const UpdateIncidentResponse = zod.object({
   "date": zod.string(),
   "time": zod.string(),
   "location": zod.string(),
-  "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']),
+  "type": zod.enum(['Crime', 'Non-Crime']),
   "description": zod.string(),
   "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']),
   "reportingOfficerId": zod.number().nullish(),
@@ -367,6 +394,8 @@ export const ListOfficersResponseItem = zod.object({
   "rank": zod.string(),
   "role": zod.enum(['admin', 'officer']),
   "username": zod.string(),
+  "avatarUrl": zod.string().nullish(),
+  "coverUrl": zod.string().nullish(),
   "createdAt": zod.string()
 })
 export const ListOfficersResponse = zod.array(ListOfficersResponseItem)
@@ -391,6 +420,8 @@ export const CreateOfficerResponse = zod.object({
   "rank": zod.string(),
   "role": zod.enum(['admin', 'officer']),
   "username": zod.string(),
+  "avatarUrl": zod.string().nullish(),
+  "coverUrl": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -409,6 +440,8 @@ export const GetOfficerResponse = zod.object({
   "rank": zod.string(),
   "role": zod.enum(['admin', 'officer']),
   "username": zod.string(),
+  "avatarUrl": zod.string().nullish(),
+  "coverUrl": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -436,6 +469,8 @@ export const UpdateOfficerResponse = zod.object({
   "rank": zod.string(),
   "role": zod.enum(['admin', 'officer']),
   "username": zod.string(),
+  "avatarUrl": zod.string().nullish(),
+  "coverUrl": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -481,7 +516,7 @@ export const GetDashboardStatsResponse = zod.object({
  * @summary Incidents grouped by type
  */
 export const GetIncidentsByTypeResponseItem = zod.object({
-  "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']),
+  "type": zod.enum(['Crime', 'Non-Crime']),
   "count": zod.number()
 })
 export const GetIncidentsByTypeResponse = zod.array(GetIncidentsByTypeResponseItem)
@@ -506,7 +541,7 @@ export const GetRecentIncidentsResponseItem = zod.object({
   "date": zod.string(),
   "time": zod.string(),
   "location": zod.string(),
-  "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']),
+  "type": zod.enum(['Crime', 'Non-Crime']),
   "description": zod.string(),
   "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']),
   "reportingOfficerId": zod.number().nullish(),
@@ -809,7 +844,7 @@ export const GetPersonIncidentsResponseItem = zod.object({
   "date": zod.string(),
   "time": zod.string(),
   "location": zod.string(),
-  "type": zod.enum(['Crime', 'Accident', 'Dispute', 'Missing Person', 'Other']),
+  "type": zod.enum(['Crime', 'Non-Crime']),
   "description": zod.string(),
   "status": zod.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']),
   "reportingOfficerId": zod.number().nullish(),

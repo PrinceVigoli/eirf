@@ -12,14 +12,11 @@ import {
 } from "@/components/ui/table";
 import { Search, Plus, Filter } from "lucide-react";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { INCIDENT_TYPES } from "@/lib/incident-types";
-import type { IncidentType } from "@/lib/incident-types";
 import { getStatusColor, getStatusLabel } from "@/lib/incident-status";
 
 // Radix Select doesn't allow an empty-string item value, so "all" stands in
 // for "no filter" here and gets translated back to undefined below.
 const STATUS_OPTIONS = ["all", "open", "under_investigation", "settled", "closed", "archived"];
-const TYPE_OPTIONS = ["all", ...INCIDENT_TYPES];
 const CATEGORY_OPTIONS = ["all", "crime", "non_crime"];
 
 // "all" plus the two IncidentCategory values ("crime"/"non_crime") — same
@@ -34,7 +31,6 @@ export default function IncidentList() {
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<IncidentStatus | "">("");
-  const [type, setType] = useState<IncidentType | "">("");
   const [category, setCategory] = useState<IncidentCategory | "">("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -49,7 +45,6 @@ export default function IncidentList() {
   const { data, isLoading } = useListIncidents({
     search: debouncedSearch || undefined,
     status: status || undefined,
-    type: type || undefined,
     category: category || undefined,
     startDate: startDate || undefined,
     endDate: endDate || undefined,
@@ -91,17 +86,6 @@ export default function IncidentList() {
             <SelectContent>
               {STATUS_OPTIONS.map(s => (
                 <SelectItem key={s} value={s}>{s === "all" ? "All Statuses" : getStatusLabel(s)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={type || "all"}
-            onValueChange={(v) => { setType(v === "all" ? "" : v as IncidentType); setPage(1); }}
-          >
-            <SelectTrigger className="w-auto min-w-[10rem]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {TYPE_OPTIONS.map(t => (
-                <SelectItem key={t} value={t}>{t === "all" ? "All Types" : t}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -182,15 +166,9 @@ export default function IncidentList() {
                   <TableCell className="font-mono text-xs text-muted-foreground">{incident.incidentNumber}</TableCell>
                   <TableCell className="whitespace-nowrap">{incident.date}</TableCell>
                   <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <span>{incident.type}</span>
-                      <Badge
-                        variant={incident.category === "crime" ? "destructive" : "outline"}
-                        className="text-[10px] px-1.5 py-0 font-normal"
-                      >
-                        {categoryOptionLabel(incident.category)}
-                      </Badge>
-                    </div>
+                    <Badge variant={incident.category === "crime" ? "destructive" : "outline"}>
+                      {incident.type}
+                    </Badge>
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate" title={incident.location}>
                     {incident.location}

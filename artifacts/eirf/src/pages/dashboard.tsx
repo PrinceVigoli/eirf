@@ -116,30 +116,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle>Incidents by Type</CardTitle>
-            <CardDescription>Current distribution</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {typeData.length === 0 ? (
-              <div className="flex items-center justify-center h-60 text-muted-foreground text-sm">No data</div>
-            ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie data={typeData} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={80} label={({ type }) => type}>
-                    {typeData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm">
+        <Card className="lg:col-span-2 shadow-sm">
           <CardHeader>
             <CardTitle>Crime vs Non-Crime</CardTitle>
             <CardDescription>Category split</CardDescription>

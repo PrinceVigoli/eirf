@@ -3,7 +3,7 @@ import bcryptjs from "bcryptjs";
 import { db, officersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
-import { LoginBody, ChangePasswordBody } from "@workspace/api-zod";
+import { LoginBody, ChangePasswordBody, UpdateMyProfileBody } from "@workspace/api-zod";
 import { logAction } from "../lib/logger-helper";
 import { isRateLimited } from "../lib/rateLimit";
 
@@ -51,6 +51,8 @@ router.post("/auth/login", async (req, res): Promise<void> => {
       rank: officer.rank,
       role: officer.role,
       username: officer.username,
+      avatarUrl: officer.avatarUrl,
+      coverUrl: officer.coverUrl,
       createdAt: officer.createdAt.toISOString(),
     },
   });
@@ -73,6 +75,8 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
     rank: o.rank,
     role: o.role,
     username: o.username,
+    avatarUrl: o.avatarUrl,
+    coverUrl: o.coverUrl,
     createdAt: o.createdAt.toISOString(),
   });
 });
@@ -102,6 +106,56 @@ router.patch("/auth/me/password", requireAuth, async (req, res): Promise<void> =
   res.clearCookie("officerId");
   await logAction(req.officer!.id, "CHANGE_PASSWORD", `Officer ${req.officer!.name} changed their password`);
   res.json({ message: "Password changed successfully. Please sign in again." });
+});
+
+// Only accept object-storage paths minted by our own upload flow
+// (/objects/<id>), so a caller can't point avatar/cover at an arbitrary
+// URL. null clears the photo.
+const OBJECT_PATH_RE = /^\/objects\/[A-Za-z0-9._/-]+$/;
+
+router.patch("/auth/me/profile", requireAuth, async (req, res): Promise<void> => {
+  const parsed = UpdateMyProfileBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+  const { avatarUrl, coverUrl } = parsed.data;
+  const updates: { avatarUrl?: string | null; coverUrl?: string | null } = {};
+  if (avatarUrl !== undefined) {
+    if (avatarUrl !== null && !OBJECT_PATH_RE.test(avatarUrl)) {
+      res.status(400).json({ error: "Invalid avatar path" });
+      return;
+    }
+    updates.avatarUrl = avatarUrl;
+  }
+  if (coverUrl !== undefined) {
+    if (coverUrl !== null && !OBJECT_PATH_RE.test(coverUrl)) {
+      res.status(400).json({ error: "Invalid cover path" });
+      return;
+    }
+    updates.coverUrl = coverUrl;
+  }
+  if (Object.keys(updates).length === 0) {
+    res.status(400).json({ error: "No changes provided" });
+    return;
+  }
+  const [updated] = await db
+    .update(officersTable)
+    .set(updates)
+    .where(eq(officersTable.id, req.officer!.id))
+    .returning();
+  await logAction(req.officer!.id, "UPDATE_PROFILE", `Officer ${req.officer!.name} updated their profile photos`);
+  res.json({
+    id: updated.id,
+    name: updated.name,
+    badgeNumber: updated.badgeNumber,
+    rank: updated.rank,
+    role: updated.role,
+    username: updated.username,
+    avatarUrl: updated.avatarUrl,
+    coverUrl: updated.coverUrl,
+    createdAt: updated.createdAt.toISOString(),
+  });
 });
 
 export default router;

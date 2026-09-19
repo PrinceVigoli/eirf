@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Officer avatar">
+  <defs>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <clipPath id="clip"><circle cx="64" cy="64" r="64"/></clipPath>
+  </defs>
+  <circle cx="64" cy="64" r="64" fill="url(#ring)"/>
+  <g clip-path="url(#clip)">
+    <!-- head -->
+    <circle cx="64" cy="50" r="20" fill="#ffffff" fill-opacity="0.95"/>
+    <!-- shoulders -->
+    <path d="M26 122 C26 92 46 80 64 80 C82 80 102 92 102 122 Z" fill="#ffffff" fill-opacity="0.95"/>
+    <!-- collar hint -->
+    <path d="M64 80 l-11 15 6 6 z" fill="#1d4ed8" fill-opacity="0.30"/>
+    <path d="M64 80 l11 15 -6 6 z" fill="#1d4ed8" fill-opacity="0.30"/>
+    <!-- small badge star -->
+    <path d="M64 95 l2.5 5.2 5.7.4 -4.3 3.7 1.4 5.6 -5.3-3.2 -5.3 3.2 1.4-5.6 -4.3-3.7 5.7-.4z" fill="#f4c430"/>
+  </g>
+</svg>

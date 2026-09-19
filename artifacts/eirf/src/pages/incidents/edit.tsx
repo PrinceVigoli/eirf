@@ -19,12 +19,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Save } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { EvidencePanel } from "@/components/evidence-panel";
 import { useToast } from "@/hooks/use-toast";
-import { INCIDENT_TYPES, INCIDENT_TYPE_GROUPS } from "@/lib/incident-types";
+import { INCIDENT_TYPES } from "@/lib/incident-types";
 import { allowedNextStatuses, ALL_STATUSES, getStatusLabel } from "@/lib/incident-status";
 import { PersonsInvolvedField, type PersonInvolved } from "@/components/persons-involved-field";
 
@@ -275,13 +275,8 @@ export default function EditIncident() {
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger id="type"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {INCIDENT_TYPE_GROUPS.map((group) => (
-                          <SelectGroup key={group.label}>
-                            <SelectLabel>{group.label}</SelectLabel>
-                            {group.types.map((t) => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
-                            ))}
-                          </SelectGroup>
+                        {INCIDENT_TYPES.map((t) => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -350,8 +345,28 @@ export default function EditIncident() {
                     const allowed = allowedNextStatuses(incident.status);
                     const options = isAdmin ? ALL_STATUSES : allowed;
                     return (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger id="status"><SelectValue /></SelectTrigger>
+                      <Select
+                        value={field.value}
+                        onValueChange={(v) => {
+                          // Guard against spurious empty events Radix can emit
+                          // while the option list re-renders (it depends on the
+                          // async `me`/isAdmin, so the <SelectItem>s remount when
+                          // `me` resolves). An unguarded field.onChange("") would
+                          // wipe a valid status, and since z.enum(ALL_STATUSES)
+                          // then fails with no inline error, "Save Changes" would
+                          // silently do nothing. Same fix as the investigator field.
+                          if (v) field.onChange(v);
+                        }}
+                      >
+                        <SelectTrigger id="status">
+                          {/* Render the label explicitly: Radix's <SelectValue>
+                              does not reliably resolve a controlled value whose
+                              matching <SelectItem> mounts/re-renders after the
+                              value is set. */}
+                          <SelectValue>
+                            {field.value ? getStatusLabel(field.value) : "Select status"}
+                          </SelectValue>
+                        </SelectTrigger>
                         <SelectContent>
                           {options.map((s) => (
                             <SelectItem key={s} value={s}>

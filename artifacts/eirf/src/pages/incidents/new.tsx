@@ -10,11 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Paperclip, Save, X } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { INCIDENT_TYPES, INCIDENT_TYPE_GROUPS } from "@/lib/incident-types";
+import { INCIDENT_TYPES } from "@/lib/incident-types";
 import { PersonsInvolvedField, type PersonInvolved } from "@/components/persons-involved-field";
 
 const schema = z.object({
@@ -209,13 +209,8 @@ export default function NewIncident() {
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger id="type"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {INCIDENT_TYPE_GROUPS.map((group) => (
-                          <SelectGroup key={group.label}>
-                            <SelectLabel>{group.label}</SelectLabel>
-                            {group.types.map((t) => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
-                            ))}
-                          </SelectGroup>
+                        {INCIDENT_TYPES.map((t) => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -266,7 +261,7 @@ export default function NewIncident() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="status">Initial Status</Label>
+                <Label htmlFor="status">Status</Label>
                 <Controller
                   name="status"
                   control={form.control}

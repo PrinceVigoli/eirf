@@ -11,7 +11,7 @@ export const incidentStatusEnum = pgEnum("incident_status", ["open", "under_inve
 // See U4/B4 in the audit. Keep this list in sync with
 // artifacts/eirf/src/lib/incident-types.ts and
 // lib/api-spec/openapi.yaml's IncidentType schema.
-export const incidentTypeEnum = pgEnum("incident_type", ["Crime", "Accident", "Dispute", "Missing Person", "Other"]);
+export const incidentTypeEnum = pgEnum("incident_type", ["Crime", "Non-Crime"]);
 export const incidentCategoryEnum = pgEnum("incident_category", ["crime", "non_crime"]);
 
 export const incidentsTable = pgTable("incidents", {
