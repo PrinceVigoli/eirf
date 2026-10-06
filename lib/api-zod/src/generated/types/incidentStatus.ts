@@ -15,4 +15,6 @@ export const IncidentStatus = {
   settled: 'settled',
   closed: 'closed',
   archived: 'archived',
+  cleared: 'cleared',
+  solved: 'solved',
 } as const;

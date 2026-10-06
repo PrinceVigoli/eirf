@@ -1,3 +1,4 @@
+import { CaseStatusHelp } from "@/components/case-status-help";
 import React from "react";
 import { Link, useParams } from "wouter";
 import { useGetIncident, getGetIncidentQueryKey } from "@workspace/api-client-react";
@@ -231,6 +232,7 @@ export default function IncidentDetail() {
                   <p className="text-sm font-medium">{incident.investigatingOfficerName || "Unassigned"}</p>
                 </div>
               </div>
+              <CaseStatusHelp />
               {incident.status === "settled" && (
                 <div className="flex items-start gap-3">
                   {/* settledDate is server-managed (set on transition to "settled")

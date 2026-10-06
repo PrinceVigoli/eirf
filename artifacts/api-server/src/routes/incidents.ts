@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { db, incidentsTable, officersTable, incidentPersonsTable, personsTable } from "@workspace/db";
-import { eq, ilike, and, gte, lte, or, desc, count, inArray } from "drizzle-orm";
+import { eq, ilike, and, gte, lte, or, desc, count, inArray, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { requireAuth, requireAdmin } from "../middlewares/requireAuth";
 import { CreateIncidentBody, UpdateIncidentBody, ListIncidentsQueryParams, AddIncidentPersonBody } from "@workspace/api-zod";
 import { logAction } from "../lib/logger-helper";
 import { paramString } from "../lib/params";
-import { isAllowedStatusTransition } from "../lib/incidentWorkflow";
+import { CASE_STATUSES, isAllowedStatusTransition } from "../lib/incidentWorkflow";
 import { deriveCategory } from "../lib/incidentClassification";
 import { resolveSettledDate } from "../lib/settledDate";
 import { validateReportedDate } from "../lib/reportedDate";
@@ -84,14 +84,14 @@ router.get("/incidents", requireAuth, async (req, res): Promise<void> => {
       ilike(incidentsTable.location, q),
       ilike(incidentsTable.description, q),
       ilike(incidentsTable.incidentNumber, q),
-      ilike(incidentsTable.type, q),
+      ilike(sql`${incidentsTable.type}::text`, q),
     ));
   }
   if (params.type) conditions.push(eq(incidentsTable.type, params.type));
   if (params.category) conditions.push(eq(incidentsTable.category, params.category as "crime" | "non_crime"));
   if (params.reportingOfficerId) conditions.push(eq(incidentsTable.reportingOfficerId, params.reportingOfficerId));
   if (params.investigatingOfficerId) conditions.push(eq(incidentsTable.investigatingOfficerId, params.investigatingOfficerId));
-  if (params.status) conditions.push(eq(incidentsTable.status, params.status as "open" | "under_investigation" | "settled" | "closed" | "archived"));
+  if (params.status) conditions.push(eq(incidentsTable.status, params.status));
   if (params.startDate) conditions.push(gte(incidentsTable.date, params.startDate));
   if (params.endDate) conditions.push(lte(incidentsTable.date, params.endDate));
   const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -118,6 +118,9 @@ router.post("/incidents", requireAuth, async (req, res): Promise<void> => {
   // category is always server-derived from type — never trust a client-sent
   // value (there isn't one on this contract, but never read one either).
   const category = deriveCategory(data.type);
+  if (data.status && !CASE_STATUSES.some(status => status === data.status)) {
+    res.status(400).json({ error: "Choose Under Investigation, Cleared, or Solved" }); return;
+  }
 
   if (data.dateReported !== undefined) {
     const reportedCheck = validateReportedDate(data.dateReported, data.date, today);
@@ -172,12 +175,12 @@ router.post("/incidents", requireAuth, async (req, res): Promise<void> => {
     const values = {
       ...data,
       incidentNumber,
-      status: data.status ?? "open",
+      status: data.status ?? "under_investigation",
       reportingOfficerId: req.officer!.id,
       category,
       dateReported: data.dateReported ?? today,
       investigatingOfficerId: data.investigatingOfficerId ?? null,
-      settledDate: resolveSettledDate(data.status ?? "open", null, today),
+      settledDate: resolveSettledDate(data.status ?? "under_investigation", null, today),
     };
     try {
       if (dedupedLinks.length > 0) {
@@ -294,6 +297,9 @@ router.patch("/incidents/:id", requireAuth, async (req, res): Promise<void> => {
   // B5: don't allow an arbitrary status jump (e.g. archived -> open).
   // Non-admins are limited to the workflow graph; admins can force any
   // transition, but it's flagged and logged distinctly as an override.
+  if (data.status && data.status !== target.status && !CASE_STATUSES.some(status => status === data.status)) {
+    res.status(400).json({ error: "Choose Under Investigation, Cleared, or Solved" }); return;
+  }
   let isAdminOverride = false;
   if (data.status && data.status !== target.status) {
     const isValidTransition = isAllowedStatusTransition(target.status, data.status);

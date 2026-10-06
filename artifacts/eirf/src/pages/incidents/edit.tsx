@@ -1,3 +1,4 @@
+import { CaseStatusHelp } from "@/components/case-status-help";
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { useForm, Controller } from "react-hook-form";
@@ -100,7 +101,7 @@ export default function EditIncident() {
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { date: "", time: "", dateReported: "", location: "", type: "Crime", description: "", witnessStatements: "", evidence: "", notes: "", status: "open", investigatingOfficerId: null }
+    defaultValues: { date: "", time: "", dateReported: "", location: "", type: "Crime", description: "", witnessStatements: "", evidence: "", notes: "", status: "under_investigation", investigatingOfficerId: null }
   });
 
   const status = form.watch("status");
@@ -335,15 +336,8 @@ export default function EditIncident() {
                   name="status"
                   control={form.control}
                   render={({ field }) => {
-                    // Most records-management workflows don't allow jumping
-                    // straight from e.g. "archived" to "open" (B5 in the
-                    // audit) — only offer valid next steps from the
-                    // record's current status. Admins can still reach any
-                    // status, since corrections sometimes require it, but
-                    // out-of-workflow options are clearly labeled so it's
-                    // an intentional override rather than an accident.
-                    const allowed = allowedNextStatuses(incident.status);
-                    const options = isAdmin ? ALL_STATUSES : allowed;
+                    const allowed = allowedNextStatuses();
+                    const options = allowed;
                     return (
                       <Select
                         value={field.value}
@@ -371,7 +365,6 @@ export default function EditIncident() {
                           {options.map((s) => (
                             <SelectItem key={s} value={s}>
                               {getStatusLabel(s)}
-                              {isAdmin && !allowed.includes(s) ? " (admin override)" : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -379,9 +372,7 @@ export default function EditIncident() {
                     );
                   }}
                 />
-                {status === "settled" && (
-                  <p className="text-xs text-muted-foreground">Settled date is recorded automatically.</p>
-                )}
+                <CaseStatusHelp />
               </div>
             </div>
             <div className="space-y-2">

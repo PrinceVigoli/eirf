@@ -66,7 +66,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { href: "/incidents", label: "Incident Records", icon: FileText },
     { href: "/incidents/new", label: "New Incident", icon: FilePlus },
-    { href: "/persons", label: "Name Index", icon: UserSearch },
+    { href: "/persons", label: "Search", icon: UserSearch },
     { href: "/reports", label: "Reports", icon: FileBarChart },
     ...(isAdmin ? [
       { href: "/officers", label: "Officers Directory", icon: Users },

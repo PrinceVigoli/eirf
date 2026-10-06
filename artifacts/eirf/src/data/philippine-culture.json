@@ -1,0 +1,740 @@
+{
+  "source": "https://psa.gov.ph/node/120299",
+  "title": "Ethnicity and Language/Dialect Generally Spoken at Home",
+  "publisher": "Philippine Statistics Authority",
+  "census": 2010,
+  "published": "2017-07-01",
+  "retrieved": "2026-10-06",
+  "license": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "entries": [
+    {
+      "code": "001",
+      "name": "Abelling/Abellen/Aberling/Aborlin"
+    },
+    {
+      "code": "002",
+      "name": "Adasen"
+    },
+    {
+      "code": "003",
+      "name": "Aeta/Ayta"
+    },
+    {
+      "code": "004",
+      "name": "Agta"
+    },
+    {
+      "code": "005",
+      "name": "Agta-Cimaron"
+    },
+    {
+      "code": "006",
+      "name": "Agta-Agay"
+    },
+    {
+      "code": "007",
+      "name": "Agta-Dumagat"
+    },
+    {
+      "code": "008",
+      "name": "Agta-Tabangnon"
+    },
+    {
+      "code": "009",
+      "name": "Agta-Taboy"
+    },
+    {
+      "code": "010",
+      "name": "Agutaynen"
+    },
+    {
+      "code": "011",
+      "name": "Akeanon"
+    },
+    {
+      "code": "012",
+      "name": "Alangan"
+    },
+    {
+      "code": "013",
+      "name": "Ambala"
+    },
+    {
+      "code": "014",
+      "name": "Applai"
+    },
+    {
+      "code": "015",
+      "name": "Aromanen-Manobo"
+    },
+    {
+      "code": "016",
+      "name": "Ata"
+    },
+    {
+      "code": "017",
+      "name": "Ata/Negrito"
+    },
+    {
+      "code": "018",
+      "name": "Ata-Manobo"
+    },
+    {
+      "code": "019",
+      "name": "Ati"
+    },
+    {
+      "code": "020",
+      "name": "Ayangan"
+    },
+    {
+      "code": "021",
+      "name": "B'laan/Blaan"
+    },
+    {
+      "code": "022",
+      "name": "Badjao"
+    },
+    {
+      "code": "023",
+      "name": "Bago"
+    },
+    {
+      "code": "024",
+      "name": "Bagobo"
+    },
+    {
+      "code": "025",
+      "name": "Bagobo-Tagabawa"
+    },
+    {
+      "code": "026",
+      "name": "Bajao/Bajau"
+    },
+    {
+      "code": "027",
+      "name": "Balangao"
+    },
+    {
+      "code": "028",
+      "name": "Balatok"
+    },
+    {
+      "code": "029",
+      "name": "Baliwon/Gaddang"
+    },
+    {
+      "code": "030",
+      "name": "Banao"
+    },
+    {
+      "code": "031",
+      "name": "Bangon"
+    },
+    {
+      "code": "032",
+      "name": "Bantoanon"
+    },
+    {
+      "code": "033",
+      "name": "Banwaon"
+    },
+    {
+      "code": "034",
+      "name": "Batak"
+    },
+    {
+      "code": "035",
+      "name": "Batangan"
+    },
+    {
+      "code": "036",
+      "name": "Belwang"
+    },
+    {
+      "code": "037",
+      "name": "Bikol/Bicol"
+    },
+    {
+      "code": "038",
+      "name": "Binongan"
+    },
+    {
+      "code": "039",
+      "name": "Bisaya/Binisaya"
+    },
+    {
+      "code": "040",
+      "name": "Boholano"
+    },
+    {
+      "code": "041",
+      "name": "Bontok"
+    },
+    {
+      "code": "042",
+      "name": "Bugkalot/Ilongot"
+    },
+    {
+      "code": "043",
+      "name": "Buhid"
+    },
+    {
+      "code": "044",
+      "name": "Buhid (Bangon)"
+    },
+    {
+      "code": "045",
+      "name": "Bukidnon"
+    },
+    {
+      "code": "046",
+      "name": "Cagayanen"
+    },
+    {
+      "code": "047",
+      "name": "Calinga"
+    },
+    {
+      "code": "048",
+      "name": "Capizeño"
+    },
+    {
+      "code": "049",
+      "name": "Caviteño"
+    },
+    {
+      "code": "050",
+      "name": "Caviteño-Chavacano"
+    },
+    {
+      "code": "051",
+      "name": "Cebuano"
+    },
+    {
+      "code": "052",
+      "name": "Chinese"
+    },
+    {
+      "code": "053",
+      "name": "Clata/Klata"
+    },
+    {
+      "code": "054",
+      "name": "Cotabateño"
+    },
+    {
+      "code": "055",
+      "name": "Cotabateño-Chavacano"
+    },
+    {
+      "code": "056",
+      "name": "Cuyonon/Cuyonen"
+    },
+    {
+      "code": "057",
+      "name": "Davao-Chavacano"
+    },
+    {
+      "code": "058",
+      "name": "Davaweño"
+    },
+    {
+      "code": "059",
+      "name": "Diangan"
+    },
+    {
+      "code": "060",
+      "name": "Dibabawon"
+    },
+    {
+      "code": "061",
+      "name": "Dibabeen Mulitaan"
+    },
+    {
+      "code": "062",
+      "name": "Dibaben"
+    },
+    {
+      "code": "063",
+      "name": "Direrayaan"
+    },
+    {
+      "code": "064",
+      "name": "Dumagat/Alta"
+    },
+    {
+      "code": "065",
+      "name": "Dumagat"
+    },
+    {
+      "code": "066",
+      "name": "Eskaya"
+    },
+    {
+      "code": "067",
+      "name": "Gaddang"
+    },
+    {
+      "code": "068",
+      "name": "Gubang"
+    },
+    {
+      "code": "069",
+      "name": "Gubatnon"
+    },
+    {
+      "code": "070",
+      "name": "Guiangan"
+    },
+    {
+      "code": "071",
+      "name": "Halawodnon"
+    },
+    {
+      "code": "072",
+      "name": "Hanunuo"
+    },
+    {
+      "code": "073",
+      "name": "Henanga"
+    },
+    {
+      "code": "074",
+      "name": "Higaonon"
+    },
+    {
+      "code": "075",
+      "name": "Hiligaynon, Ilonggo"
+    },
+    {
+      "code": "076",
+      "name": "Ibaloi/Ibaloy"
+    },
+    {
+      "code": "077",
+      "name": "Ibanag"
+    },
+    {
+      "code": "078",
+      "name": "Ibatan"
+    },
+    {
+      "code": "079",
+      "name": "Ifugao"
+    },
+    {
+      "code": "080",
+      "name": "Ilianen"
+    },
+    {
+      "code": "081",
+      "name": "Illaud"
+    },
+    {
+      "code": "082",
+      "name": "Ilocano"
+    },
+    {
+      "code": "083",
+      "name": "Iranon/Iranun/Iraynon"
+    },
+    {
+      "code": "084",
+      "name": "Iraya"
+    },
+    {
+      "code": "085",
+      "name": "Isinai"
+    },
+    {
+      "code": "086",
+      "name": "Isneg/Isnag/Apayao"
+    },
+    {
+      "code": "087",
+      "name": "Isoroken"
+    },
+    {
+      "code": "088",
+      "name": "Itawis"
+    },
+    {
+      "code": "089",
+      "name": "Itneg/Tingguian"
+    },
+    {
+      "code": "090",
+      "name": "Ivatan"
+    },
+    {
+      "code": "091",
+      "name": "Iwak/Iowak/Owak/I-wak"
+    },
+    {
+      "code": "092",
+      "name": "Jama Mapun"
+    },
+    {
+      "code": "093",
+      "name": "Kabayukan"
+    },
+    {
+      "code": "094",
+      "name": "Kabihug"
+    },
+    {
+      "code": "095",
+      "name": "Kadaklan/kachakran"
+    },
+    {
+      "code": "096",
+      "name": "Kailawan/Kaylawan"
+    },
+    {
+      "code": "097",
+      "name": "Kalagan"
+    },
+    {
+      "code": "098",
+      "name": "Kalanguya"
+    },
+    {
+      "code": "099",
+      "name": "Kalanguya-Ikalahan"
+    },
+    {
+      "code": "100",
+      "name": "Kalibugan/Kolibugan"
+    },
+    {
+      "code": "101",
+      "name": "Kalinga"
+    },
+    {
+      "code": "102",
+      "name": "Kamiguin"
+    },
+    {
+      "code": "103",
+      "name": "Kankanaey"
+    },
+    {
+      "code": "104",
+      "name": "Kapampangan"
+    },
+    {
+      "code": "105",
+      "name": "Karao"
+    },
+    {
+      "code": "106",
+      "name": "Karay-a"
+    },
+    {
+      "code": "107",
+      "name": "Karulano"
+    },
+    {
+      "code": "108",
+      "name": "Kaunana"
+    },
+    {
+      "code": "109",
+      "name": "Ke'ney or Ken-ey/Tau't-Bato"
+    },
+    {
+      "code": "110",
+      "name": "Kirenteken"
+    },
+    {
+      "code": "111",
+      "name": "Lahitanen"
+    },
+    {
+      "code": "112",
+      "name": "Lambangian"
+    },
+    {
+      "code": "113",
+      "name": "Langilan"
+    },
+    {
+      "code": "114",
+      "name": "Livunganen"
+    },
+    {
+      "code": "115",
+      "name": "Mabaka"
+    },
+    {
+      "code": "116",
+      "name": "Maeng"
+    },
+    {
+      "code": "117",
+      "name": "Magahats"
+    },
+    {
+      "code": "118",
+      "name": "Mag-anti/Mag-Antsi/Mag-anchi"
+    },
+    {
+      "code": "119",
+      "name": "Magbekin/Magbukon/Magbukun"
+    },
+    {
+      "code": "120",
+      "name": "Mag-indi"
+    },
+    {
+      "code": "121",
+      "name": "Magkunana"
+    },
+    {
+      "code": "122",
+      "name": "Maguindanao"
+    },
+    {
+      "code": "123",
+      "name": "Majokayong"
+    },
+    {
+      "code": "124",
+      "name": "Malaueg"
+    },
+    {
+      "code": "125",
+      "name": "Mamanwa"
+    },
+    {
+      "code": "126",
+      "name": "Mandaya"
+    },
+    {
+      "code": "127",
+      "name": "Mangguangan"
+    },
+    {
+      "code": "128",
+      "name": "Manobo"
+    },
+    {
+      "code": "129",
+      "name": "Manobo-Blit"
+    },
+    {
+      "code": "130",
+      "name": "Manobo-Dulangan"
+    },
+    {
+      "code": "131",
+      "name": "Mansaka"
+    },
+    {
+      "code": "132",
+      "name": "Manubo-Ubo/Manobo-Ubo"
+    },
+    {
+      "code": "133",
+      "name": "Maranao"
+    },
+    {
+      "code": "134",
+      "name": "Masadiit"
+    },
+    {
+      "code": "135",
+      "name": "Masbateño/Masbatenon"
+    },
+    {
+      "code": "136",
+      "name": "Matigsalog/Matigsalug"
+    },
+    {
+      "code": "137",
+      "name": "Molbog"
+    },
+    {
+      "code": "138",
+      "name": "Muyadan"
+    },
+    {
+      "code": "139",
+      "name": "Obu-Manuvu/Ubo-Manobo"
+    },
+    {
+      "code": "140",
+      "name": "Pala'wan/Palawan-o"
+    },
+    {
+      "code": "141",
+      "name": "Palawani"
+    },
+    {
+      "code": "142",
+      "name": "Pan-ayanon"
+    },
+    {
+      "code": "143",
+      "name": "Panay-Bukidnon"
+    },
+    {
+      "code": "144",
+      "name": "Pangasinan/Panggalato"
+    },
+    {
+      "code": "145",
+      "name": "Parananum"
+    },
+    {
+      "code": "146",
+      "name": "Pulangien/Pulangiyen"
+    },
+    {
+      "code": "147",
+      "name": "Ratagnon"
+    },
+    {
+      "code": "148",
+      "name": "Remontado"
+    },
+    {
+      "code": "149",
+      "name": "Romblomanon"
+    },
+    {
+      "code": "150",
+      "name": "Sama Badajo"
+    },
+    {
+      "code": "151",
+      "name": "Sama Bangingi"
+    },
+    {
+      "code": "152",
+      "name": "Sama Laut"
+    },
+    {
+      "code": "153",
+      "name": "Sama/Samal"
+    },
+    {
+      "code": "154",
+      "name": "Sangil"
+    },
+    {
+      "code": "155",
+      "name": "Sibuyan Mangyan-Tagabukid"
+    },
+    {
+      "code": "156",
+      "name": "Subanen/Subanon/Subanun"
+    },
+    {
+      "code": "157",
+      "name": "Surigaonon"
+    },
+    {
+      "code": "158",
+      "name": "T'boli/Tboli"
+    },
+    {
+      "code": "159",
+      "name": "Tadyawan"
+    },
+    {
+      "code": "160",
+      "name": "Tagabawa"
+    },
+    {
+      "code": "161",
+      "name": "Tagakaulo"
+    },
+    {
+      "code": "162",
+      "name": "Tagalog"
+    },
+    {
+      "code": "163",
+      "name": "Tagbanua"
+    },
+    {
+      "code": "164",
+      "name": "Tagbanua (Kalamianen)"
+    },
+    {
+      "code": "165",
+      "name": "Tagbanua/Calamian"
+    },
+    {
+      "code": "166",
+      "name": "Talaandig"
+    },
+    {
+      "code": "167",
+      "name": "Talaingod"
+    },
+    {
+      "code": "168",
+      "name": "Tau-buid"
+    },
+    {
+      "code": "169",
+      "name": "Tausug"
+    },
+    {
+      "code": "170",
+      "name": "Teduray"
+    },
+    {
+      "code": "171",
+      "name": "Tigwahanon"
+    },
+    {
+      "code": "172",
+      "name": "Tanananen"
+    },
+    {
+      "code": "173",
+      "name": "Tuwali"
+    },
+    {
+      "code": "174",
+      "name": "Waray"
+    },
+    {
+      "code": "175",
+      "name": "Yakan"
+    },
+    {
+      "code": "176",
+      "name": "Yapayao"
+    },
+    {
+      "code": "177",
+      "name": "Yogad"
+    },
+    {
+      "code": "178",
+      "name": "Zambageño-Chavacano"
+    },
+    {
+      "code": "179",
+      "name": "Zambal"
+    },
+    {
+      "code": "180",
+      "name": "Other Local Dialects/Ethnicity"
+    },
+    {
+      "code": "181",
+      "name": "American/English"
+    },
+    {
+      "code": "182",
+      "name": "Other Foreign Languages/Ethnicity"
+    }
+  ]
+}

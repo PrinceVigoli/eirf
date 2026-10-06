@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, personsTable, incidentPersonsTable, incidentsTable, officersTable } from "@workspace/db";
-import { eq, ilike, and, or, count, inArray, desc } from "drizzle-orm";
+import { eq, ilike, and, or, count, inArray, desc, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { requireAuth, requireAdmin } from "../middlewares/requireAuth";
 import { CreatePersonBody, UpdatePersonBody, ListPersonsQueryParams } from "@workspace/api-zod";
@@ -24,17 +24,43 @@ function formatPerson(p: typeof personsTable.$inferSelect) {
 }
 
 router.get("/persons", requireAuth, async (req, res): Promise<void> => {
-  // Mirrors listIncidents: an invalid/unparseable query just falls back to
-  // defaults rather than 400ing a list endpoint.
   const parsed = ListPersonsQueryParams.safeParse(req.query);
-  const params = parsed.success ? parsed.data : {};
+  if (!parsed.success) { res.status(400).json({ error: "Invalid search filters" }); return; }
+  const params = parsed.data;
+  if ([params.page, params.limit, params.age].some(value => value !== undefined && !Number.isInteger(value))) {
+    res.status(400).json({ error: "Page, limit, and age must be whole numbers" }); return;
+  }
   const page = params.page ?? 1;
   const limit = params.limit ?? 20;
   const offset = (page - 1) * limit;
 
   const conditions = [];
+  // Escape LIKE wildcards so user-entered names are matched literally.
+  const contains = (value: string) => `%${value.trim().replace(/[\\%_]/g, "\\$&")}%`;
+  for (const field of ["lastName", "middleName", "firstName"] as const) {
+    if (params[field]?.trim()) {
+      // Older records have only fullName. Do not guess name parts when migrating.
+      conditions.push(ilike(sql`coalesce(nullif(${personsTable[field]}, ''), ${personsTable.fullName})`, contains(params[field]!)));
+    }
+  }
+  for (const field of ["dialect", "tribe"] as const) {
+    if (params[field]?.trim()) conditions.push(ilike(personsTable[field], contains(params[field]!)));
+  }
+  if (params.alias?.trim()) conditions.push(ilike(personsTable.alias, contains(params.alias)));
+  if (params.address?.trim()) conditions.push(ilike(personsTable.address, contains(params.address)));
+  for (const field of ["region", "province", "cityMunicipality", "barangay"] as const) {
+    if (params[field]) conditions.push(eq(personsTable[field], params[field]));
+  }
+  if (params.age !== undefined) {
+    // Text dates from legacy records may be empty: only evaluate ISO dates.
+    // Compare month/day without casting legacy text to a PostgreSQL date.
+    conditions.push(sql`(case when ${personsTable.dateOfBirth} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+      then extract(year from current_date)::int - left(${personsTable.dateOfBirth}, 4)::int
+        - case when right(${personsTable.dateOfBirth}, 5) > to_char(current_date, 'MM-DD') then 1 else 0 end
+      else null end) = ${params.age}`);
+  }
   if (params.search) {
-    const q = `%${params.search}%`;
+    const q = contains(params.search);
     conditions.push(or(
       ilike(personsTable.fullName, q),
       ilike(personsTable.alias, q),
@@ -65,9 +91,23 @@ router.get("/persons", requireAuth, async (req, res): Promise<void> => {
 router.post("/persons", requireAuth, async (req, res): Promise<void> => {
   const parsed = CreatePersonBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  for (const field of ["lastName", "middleName", "firstName", "region", "province", "cityMunicipality", "barangay", "dialect", "tribe"] as const) {
+    if (parsed.data[field] !== undefined) parsed.data[field] = parsed.data[field].trim();
+  }
   const [person] = await db.insert(personsTable).values(parsed.data).returning();
   await logAction(req.officer!.id, "CREATE_PERSON", `Created person ${person.fullName}`);
   res.status(201).json(formatPerson(person));
+});
+
+router.get("/persons/locations", requireAuth, async (_req, res): Promise<void> => {
+  const locations = await db.selectDistinct({
+    region: personsTable.region,
+    province: personsTable.province,
+    cityMunicipality: personsTable.cityMunicipality,
+    barangay: personsTable.barangay,
+    address: personsTable.address,
+  }).from(personsTable);
+  res.json(locations);
 });
 
 router.get("/persons/:id", requireAuth, async (req, res): Promise<void> => {
@@ -87,6 +127,9 @@ router.patch("/persons/:id", requireAuth, async (req, res): Promise<void> => {
 
   // Computed partial update set, mirroring updateOfficer.
   const updates: Record<string, unknown> = {};
+  for (const field of ["lastName", "middleName", "firstName", "region", "province", "cityMunicipality", "barangay", "dialect", "tribe"] as const) {
+    if (data[field] !== undefined) updates[field] = data[field].trim();
+  }
   if (data.fullName !== undefined) updates.fullName = data.fullName;
   if (data.alias !== undefined) updates.alias = data.alias;
   if (data.dateOfBirth !== undefined) updates.dateOfBirth = data.dateOfBirth;

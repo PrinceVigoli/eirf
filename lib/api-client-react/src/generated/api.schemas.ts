@@ -99,6 +99,8 @@ export const IncidentStatus = {
   settled: 'settled',
   closed: 'closed',
   archived: 'archived',
+  cleared: 'cleared',
+  solved: 'solved',
 } as const;
 
 export type IncidentType = typeof IncidentType[keyof typeof IncidentType];
@@ -130,6 +132,24 @@ export const PersonRole = {
 export interface Person {
   id: number;
   fullName: string;
+  /** @nullable */
+  lastName?: string | null;
+  /** @nullable */
+  middleName?: string | null;
+  /** @nullable */
+  firstName?: string | null;
+  /** @nullable */
+  region?: string | null;
+  /** @nullable */
+  province?: string | null;
+  /** @nullable */
+  cityMunicipality?: string | null;
+  /** @nullable */
+  barangay?: string | null;
+  /** @nullable */
+  dialect?: string | null;
+  /** @nullable */
+  tribe?: string | null;
   /** @nullable */
   alias?: string | null;
   /** @nullable */
@@ -251,6 +271,15 @@ export interface IncidentListResponse {
 
 export interface PersonInput {
   fullName: string;
+  lastName?: string;
+  middleName?: string;
+  firstName?: string;
+  region?: string;
+  province?: string;
+  cityMunicipality?: string;
+  barangay?: string;
+  dialect?: string;
+  tribe?: string;
   alias?: string;
   dateOfBirth?: string;
   sex?: string;
@@ -267,6 +296,15 @@ export interface PersonInput {
 
 export interface PersonUpdate {
   fullName?: string;
+  lastName?: string;
+  middleName?: string;
+  firstName?: string;
+  region?: string;
+  province?: string;
+  cityMunicipality?: string;
+  barangay?: string;
+  dialect?: string;
+  tribe?: string;
   alias?: string;
   dateOfBirth?: string;
   sex?: string;
@@ -337,6 +375,8 @@ export interface DashboardStats {
   incidentsThisWeek: number;
   openIncidents: number;
   closedIncidents: number;
+  clearedIncidents: number;
+  solvedIncidents: number;
   underInvestigation: number;
 }
 
@@ -436,9 +476,45 @@ limit?: number;
 
 export type ListPersonsParams = {
 search?: string;
+lastName?: string;
+middleName?: string;
+firstName?: string;
+region?: string;
+province?: string;
+cityMunicipality?: string;
+barangay?: string;
+address?: string;
+alias?: string;
+dialect?: string;
+tribe?: string;
+/**
+ * @minimum 0
+ * @maximum 150
+ */
+age?: number;
 role?: PersonRole;
+/**
+ * @minimum 1
+ */
 page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
 limit?: number;
+};
+
+export type ListPersonLocations200Item = {
+  /** @nullable */
+  region?: string | null;
+  /** @nullable */
+  province?: string | null;
+  /** @nullable */
+  cityMunicipality?: string | null;
+  /** @nullable */
+  barangay?: string | null;
+  /** @nullable */
+  address?: string | null;
 };
 
 export type ListLogsParams = {

@@ -45,10 +45,8 @@ const schema = z
 
 type FormData = z.infer<typeof schema>;
 
-// "under_investigation" and "open" are the two statuses that still need
-// day-to-day work; everything else (settled/closed/archived) is off the
-// active desk. Used for the "Active" investigation tally.
-const ACTIVE_STATUSES = new Set(["open", "under_investigation"]);
+// Investigations and cleared cases still need follow-up; legacy open cases remain active.
+const ACTIVE_STATUSES = new Set(["open", "under_investigation", "cleared"]);
 
 function initials(name: string): string {
   return name

@@ -1,3 +1,8 @@
+import { PersonCultureFields } from "@/components/person-culture-fields";
+import { PersonLocationFields } from "@/components/person-location-fields";
+import { PersonAgeField } from "@/components/person-age-field";
+import { fullNameFromParts } from "@/lib/person-fields";
+import { useRefreshPersonRecords } from "@/hooks/use-refresh-person-records";
 import React, { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,6 +38,16 @@ const UNSPECIFIED = "unspecified";
 
 const schema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
+  lastName: z.string().optional(),
+  middleName: z.string().optional(),
+  firstName: z.string().optional(),
+  region: z.string().optional(),
+  province: z.string().optional(),
+  cityMunicipality: z.string().optional(),
+  barangay: z.string().optional(),
+  address: z.string().optional(),
+  dialect: z.string().optional(),
+  tribe: z.string().optional(),
   alias: z.string().optional(),
   sex: z.string().optional(),
   dateOfBirth: z.string().optional(),
@@ -45,6 +60,16 @@ type FormData = z.infer<typeof schema>;
 
 const defaultValues: FormData = {
   fullName: "",
+  lastName: "",
+  middleName: "",
+  firstName: "",
+  region: "",
+  province: "",
+  cityMunicipality: "",
+  barangay: "",
+  address: "",
+  dialect: "",
+  tribe: "",
   alias: "",
   sex: "",
   dateOfBirth: "",
@@ -71,11 +96,12 @@ export interface AddPersonDialogProps {
  * Condensed "add a person on the fly" dialog for use from within another
  * form (e.g. while filing an incident). Captures just enough to create a
  * `Person` record immediately; the full profile (nationality, occupation,
- * address, email, physical description, notes) can be filled in later from
+ * email, physical description, notes) can be filled in later from
  * the Persons registry (pages/persons/edit.tsx).
  */
 export function AddPersonDialog({ open, onOpenChange, onCreated, initialFullName }: AddPersonDialogProps) {
   const { toast } = useToast();
+  const refreshPersonRecords = useRefreshPersonRecords();
   const createPerson = useCreatePerson();
 
   const form = useForm<FormData>({
@@ -122,6 +148,7 @@ export function AddPersonDialog({ open, onOpenChange, onCreated, initialFullName
             });
             return;
           }
+          void refreshPersonRecords();
           toast({ title: "Person added", description: `${person.fullName} is ready to be linked.` });
           onCreated(person);
           onOpenChange(false);
@@ -139,7 +166,7 @@ export function AddPersonDialog({ open, onOpenChange, onCreated, initialFullName
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add a New Person</DialogTitle>
           <DialogDescription>
@@ -147,9 +174,14 @@ export function AddPersonDialog({ open, onOpenChange, onCreated, initialFullName
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-2"><Label htmlFor="ap-lastName">Last Name</Label><Input id="ap-lastName" {...form.register("lastName", { onChange: () => form.setValue("fullName", fullNameFromParts(form.getValues()), { shouldDirty: true, shouldValidate: true }) })} /></div>
+            <div className="space-y-2"><Label htmlFor="ap-middleName">Middle Name</Label><Input id="ap-middleName" {...form.register("middleName", { onChange: () => form.setValue("fullName", fullNameFromParts(form.getValues()), { shouldDirty: true, shouldValidate: true }) })} /></div>
+            <div className="space-y-2"><Label htmlFor="ap-firstName">First Name</Label><Input id="ap-firstName" {...form.register("firstName", { onChange: () => form.setValue("fullName", fullNameFromParts(form.getValues()), { shouldDirty: true, shouldValidate: true }) })} /></div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="ap-fullName">Full Name *</Label>
-            <Input id="ap-fullName" autoFocus {...form.register("fullName")} />
+            <Input id="ap-fullName" readOnly={!!fullNameFromParts(form.watch())} {...form.register("fullName")} />
             {form.formState.errors.fullName && (
               <p className="text-sm text-destructive">{form.formState.errors.fullName.message}</p>
             )}
@@ -186,6 +218,7 @@ export function AddPersonDialog({ open, onOpenChange, onCreated, initialFullName
               <Label htmlFor="ap-dateOfBirth">Date of Birth</Label>
               <Input type="date" id="ap-dateOfBirth" {...form.register("dateOfBirth")} />
             </div>
+            <PersonAgeField dateOfBirth={form.watch("dateOfBirth")} />
             <div className="space-y-2">
               <Label htmlFor="ap-contactNumber">Contact Number</Label>
               <Input id="ap-contactNumber" {...form.register("contactNumber")} />
@@ -217,6 +250,9 @@ export function AddPersonDialog({ open, onOpenChange, onCreated, initialFullName
               <Input id="ap-idNumber" {...form.register("idNumber")} />
             </div>
           </div>
+
+          <PersonCultureFields values={form.watch()} onChange={(field, value) => form.setValue(field, value, { shouldDirty: true })} />
+            <PersonLocationFields values={form.watch()} onChange={(field, value) => form.setValue(field, value, { shouldDirty: true })} />
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

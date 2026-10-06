@@ -1,16 +1,19 @@
+import { PersonLocationFields } from "@/components/person-location-fields";
+import { PersonCultureFields } from "@/components/person-culture-fields";
+import { nameFields } from "@/lib/person-fields";
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useListPersons } from "@workspace/api-client-react";
+import { useListPersons, type ListPersonsParams } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
 import { Search, Plus, UserSearch, AlertCircle } from "lucide-react";
-import { format } from "date-fns";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { format, differenceInYears, parseISO } from "date-fns";
 import { PERSON_ROLES, roleLabel } from "@/lib/person-roles";
 import type { PersonRole } from "@/lib/person-roles";
 
@@ -19,19 +22,25 @@ import type { PersonRole } from "@/lib/person-roles";
 // translated to `undefined` before it reaches useListPersons.
 type RoleFilter = PersonRole | "all";
 
+const emptyFilters = { region: "", province: "", cityMunicipality: "", barangay: "", address: "", lastName: "", middleName: "", firstName: "", alias: "", dialect: "", tribe: "", age: "" };
+
 export default function PersonList() {
   const [, navigate] = useLocation();
-  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState(emptyFilters);
+  const [appliedFilters, setAppliedFilters] = useState<ListPersonsParams>({});
   const [role, setRole] = useState<RoleFilter>("all");
   const [page, setPage] = useState(1);
   const limit = 20;
 
-  // Debounce the search term so we don't fire a request on every keystroke —
-  // mirrors the incidents list (see @/hooks/use-debounced-value).
-  const debouncedSearch = useDebouncedValue(search, 350);
+  const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const values = Object.fromEntries(Object.entries(filters).filter(([, value]) => value.trim()).map(([key, value]) => [key, key === "age" || nameFields.some(([field]) => field === key) ? value.trim() : value]));
+    setAppliedFilters({ ...values, age: filters.age === "" ? undefined : Number(filters.age) });
+    setPage(1);
+  };
 
   const { data, isLoading, isError } = useListPersons({
-    search: debouncedSearch || undefined,
+    ...appliedFilters,
     role: role === "all" ? undefined : role,
     page,
     limit,
@@ -43,7 +52,7 @@ export default function PersonList() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
             <UserSearch className="w-8 h-8 text-primary" />
-            Name Index
+            Search Records
           </h1>
           <p className="text-muted-foreground mt-1">
             Search victims, complainants, suspects, and witnesses across all incidents
@@ -59,15 +68,27 @@ export default function PersonList() {
 
       <Card className="shadow-sm">
         <CardContent className="p-4 flex flex-col gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search persons by name, alias, or ID number…"
-              className="pl-9"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            />
-          </div>
+          <form onSubmit={submitSearch} className="space-y-4">
+            <PersonLocationFields search values={filters} onChange={(field, value) => setFilters(current => ({ ...current, [field]: value }))} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {nameFields.filter(([field]) => field !== "dialect" && field !== "tribe").map(([field, label]) => (
+                <div key={field} className="space-y-2">
+                  <Label htmlFor={field}>{label}</Label>
+                  <Input id={field} value={filters[field]} onChange={event => setFilters(current => ({ ...current, [field]: event.target.value }))} />
+                </div>
+              ))}
+              <div className="space-y-2">
+                <Label htmlFor="age">Age</Label>
+                <Input id="age" type="number" min={0} max={150} step={1} value={filters.age}
+                  onChange={event => setFilters(current => ({ ...current, age: event.target.value }))} />
+              </div>
+            </div>
+            <PersonCultureFields search values={filters} onChange={(field, value) => setFilters(current => ({ ...current, [field]: value }))} />
+            <div className="flex gap-2">
+              <Button type="submit"><Search className="w-4 h-4 mr-2" />Search</Button>
+              <Button type="button" variant="outline" onClick={() => { setFilters(emptyFilters); setAppliedFilters({}); setRole("all"); setPage(1); }}>Clear</Button>
+            </div>
+          </form>
           <Tabs
             value={role}
             onValueChange={(v) => { setRole(v as RoleFilter); setPage(1); }}
@@ -94,11 +115,14 @@ export default function PersonList() {
         </Card>
       ) : (
         <Card className="shadow-sm overflow-hidden">
+          <p className="p-4 text-sm text-muted-foreground" role="status">{isLoading ? "Searching records..." : `${data?.total ?? 0} matching records`}</p>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Alias</TableHead>
+                <TableHead>Age</TableHead>
+                <TableHead>Address</TableHead>
                 <TableHead>ID Number</TableHead>
                 <TableHead>Date of Birth</TableHead>
                 <TableHead className="text-right">Action</TableHead>
@@ -108,12 +132,12 @@ export default function PersonList() {
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={5} className="h-14 animate-pulse bg-muted/50" />
+                    <TableCell colSpan={7} className="h-14 animate-pulse bg-muted/50" />
                   </TableRow>
                 ))
               ) : data?.persons.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                     No persons found.
                   </TableCell>
                 </TableRow>
@@ -135,6 +159,8 @@ export default function PersonList() {
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{person.alias || "—"}</TableCell>
+                    <TableCell>{person.dateOfBirth && !isNaN(parseISO(person.dateOfBirth).getTime()) ? differenceInYears(new Date(), parseISO(person.dateOfBirth)) : "?"}</TableCell>
+                    <TableCell>{[person.address, person.barangay, person.cityMunicipality, person.province, person.region].filter(Boolean).join(", ") || "?"}</TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {person.idNumber || "—"}
                     </TableCell>

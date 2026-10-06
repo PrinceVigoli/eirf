@@ -9,7 +9,30 @@ import type { PersonRole } from './personRole';
 
 export type ListPersonsParams = {
 search?: string;
+lastName?: string;
+middleName?: string;
+firstName?: string;
+region?: string;
+province?: string;
+cityMunicipality?: string;
+barangay?: string;
+address?: string;
+alias?: string;
+dialect?: string;
+tribe?: string;
+/**
+ * @minimum 0
+ * @maximum 150
+ */
+age?: number;
 role?: PersonRole;
+/**
+ * @minimum 1
+ */
 page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
 limit?: number;
 };

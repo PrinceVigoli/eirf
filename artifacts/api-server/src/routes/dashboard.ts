@@ -46,7 +46,11 @@ router.get("/dashboard/stats", requireAuth, async (req, res): Promise<void> => {
   const [{ openCount }] = await db.select({ openCount: count() }).from(incidentsTable).where(eq(incidentsTable.status, "open"));
   const [{ closedCount }] = await db.select({ closedCount: count() }).from(incidentsTable).where(eq(incidentsTable.status, "closed"));
   const [{ underInv }] = await db.select({ underInv: count() }).from(incidentsTable).where(eq(incidentsTable.status, "under_investigation"));
+  const [{ cleared }] = await db.select({ cleared: count() }).from(incidentsTable).where(eq(incidentsTable.status, "cleared"));
+  const [{ solved }] = await db.select({ solved: count() }).from(incidentsTable).where(eq(incidentsTable.status, "solved"));
   res.json({
+    clearedIncidents: Number(cleared),
+    solvedIncidents: Number(solved),
     totalIncidents: Number(total),
     incidentsThisMonth: Number(thisMonth),
     incidentsThisWeek: Number(thisWeek),

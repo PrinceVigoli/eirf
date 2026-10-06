@@ -60,8 +60,8 @@ export default function Dashboard() {
   const statCards = [
     { title: "Total Incidents", value: stats.totalIncidents, icon: FileText, color: "text-blue-500", bg: "bg-blue-100 dark:bg-blue-900/20" },
     { title: "Under Investigation", value: stats.underInvestigation, icon: AlertTriangle, color: "text-amber-500", bg: "bg-amber-100 dark:bg-amber-900/20" },
-    { title: "Open Cases", value: stats.openIncidents, icon: Clock, color: "text-red-500", bg: "bg-red-100 dark:bg-red-900/20" },
-    { title: "Closed Cases", value: stats.closedIncidents, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-100 dark:bg-emerald-900/20" },
+    { title: "Cleared Cases", value: stats.clearedIncidents, icon: Clock, color: "text-red-500", bg: "bg-red-100 dark:bg-red-900/20" },
+    { title: "Solved Cases", value: stats.solvedIncidents, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-100 dark:bg-emerald-900/20" },
   ];
 
   return (

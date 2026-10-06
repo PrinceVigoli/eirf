@@ -3,7 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { officersTable } from "./officers";
 
-export const incidentStatusEnum = pgEnum("incident_status", ["open", "under_investigation", "settled", "closed", "archived"]);
+export const incidentStatusEnum = pgEnum("incident_status", ["open", "under_investigation", "settled", "closed", "archived", "cleared", "solved"]);
 // Previously a free-form text column with only a client-side dropdown
 // constraining it — anyone calling the API directly could set an
 // off-list value, silently breaking the "Incidents by Type" dashboard
@@ -22,7 +22,7 @@ export const incidentsTable = pgTable("incidents", {
   location: text("location").notNull(),
   type: incidentTypeEnum("type").notNull(),
   description: text("description").notNull(),
-  status: incidentStatusEnum("status").notNull().default("open"),
+  status: incidentStatusEnum("status").notNull().default("under_investigation"),
   reportingOfficerId: integer("reporting_officer_id").references(() => officersTable.id),
   witnessStatements: text("witness_statements"),
   evidence: text("evidence"),

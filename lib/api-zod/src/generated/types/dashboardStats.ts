@@ -12,5 +12,7 @@ export interface DashboardStats {
   incidentsThisWeek: number;
   openIncidents: number;
   closedIncidents: number;
+  clearedIncidents: number;
+  solvedIncidents: number;
   underInvestigation: number;
 }

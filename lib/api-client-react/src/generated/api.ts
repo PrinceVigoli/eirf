@@ -37,6 +37,7 @@ import type {
   IncidentUpdate,
   ListIncidentsParams,
   ListLogsParams,
+  ListPersonLocations200Item,
   ListPersonsParams,
   LogListResponse,
   LoginInput,
@@ -2095,6 +2096,83 @@ export const useCreatePerson = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreatePersonMutationOptions(options));
     }
+
+export const getListPersonLocationsUrl = () => {
+
+
+
+
+  return `/api/persons/locations`
+}
+
+/**
+ * @summary List distinct saved person locations
+ */
+export const listPersonLocations = async ( options?: RequestInit): Promise<ListPersonLocations200Item[]> => {
+
+  return customFetch<ListPersonLocations200Item[]>(getListPersonLocationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPersonLocationsQueryKey = () => {
+    return [
+    `/api/persons/locations`
+    ] as const;
+    }
+
+
+export const getListPersonLocationsQueryOptions = <TData = Awaited<ReturnType<typeof listPersonLocations>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPersonLocations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPersonLocationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPersonLocations>>> = ({ signal }) => listPersonLocations({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPersonLocations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPersonLocationsQueryResult = NonNullable<Awaited<ReturnType<typeof listPersonLocations>>>
+export type ListPersonLocationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List distinct saved person locations
+ */
+
+export function useListPersonLocations<TData = Awaited<ReturnType<typeof listPersonLocations>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPersonLocations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPersonLocationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetPersonUrl = (id: number,) => {
 

@@ -21,7 +21,7 @@ test("evidence hashing matches the known SHA-256 digest", async () => {
 
 test("incident workflow blocks reopening archived records directly", () => {
   assert.equal(isAllowedStatusTransition("open", "under_investigation"), true);
-  assert.equal(isAllowedStatusTransition("closed", "archived"), true);
+  assert.equal(isAllowedStatusTransition("closed", "solved"), true);
   assert.equal(isAllowedStatusTransition("archived", "open"), false);
   assert.equal(isAllowedStatusTransition("unknown", "open"), false);
 });

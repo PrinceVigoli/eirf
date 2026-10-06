@@ -72,10 +72,11 @@ export default function PersonDetail() {
   const age = person.dateOfBirth ? differenceInYears(new Date(), new Date(person.dateOfBirth)) : null;
   const linkedIncidents = personIncidents ?? [];
 
-  const hasIdentity = !!(
+  const hasIdentity = !!(person.dialect || person.tribe ||
     person.dateOfBirth || person.sex || person.nationality || person.idType || person.idNumber || person.occupation
   );
-  const hasContact = !!(person.address || person.contactNumber || person.email);
+  const fullAddress = [person.address, person.barangay, person.cityMunicipality, person.province, person.region].filter(Boolean).join(", ");
+  const hasContact = !!(fullAddress || person.contactNumber || person.email);
   const hasQuickFacts = !!(person.dateOfBirth || person.sex || person.nationality || person.idType || person.idNumber);
   const hasAnyBio = hasIdentity || hasContact || !!person.physicalDescription || !!person.notes;
 
@@ -112,6 +113,8 @@ export default function PersonDetail() {
                     value={person.dateOfBirth ? format(new Date(person.dateOfBirth), "MMM d, yyyy") : null}
                   />
                   <BioField label="Sex" value={person.sex} />
+                  <BioField label="Dialect" value={person.dialect} />
+                  <BioField label="Tribe" value={person.tribe} />
                   <BioField label="Nationality" value={person.nationality} />
                   <BioField label="Occupation" value={person.occupation} />
                   <BioField label="ID Type" value={person.idType} />
@@ -126,7 +129,7 @@ export default function PersonDetail() {
               <CardHeader><CardTitle>Contact</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <BioField label="Address" value={person.address} />
+                  <BioField label="Address" value={fullAddress} />
                   <BioField label="Contact Number" value={person.contactNumber} />
                   <BioField label="Email" value={person.email} />
                 </div>

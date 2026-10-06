@@ -525,7 +525,8 @@ self.addEventListener('fetch', (event) => {
   // ── Static assets: cache-first ───────────────────────────────────────────
   if (
     url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|ico|woff2?|ttf)$/) ||
-    url.pathname.startsWith('/assets/')
+    url.pathname.startsWith('/assets/') ||
+    url.pathname.endsWith('/data/philippine-locations.json')
   ) {
     event.respondWith(
       caches.match(request).then((cached) => {

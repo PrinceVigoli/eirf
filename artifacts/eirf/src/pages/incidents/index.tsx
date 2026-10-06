@@ -16,7 +16,7 @@ import { getStatusColor, getStatusLabel } from "@/lib/incident-status";
 
 // Radix Select doesn't allow an empty-string item value, so "all" stands in
 // for "no filter" here and gets translated back to undefined below.
-const STATUS_OPTIONS = ["all", "open", "under_investigation", "settled", "closed", "archived"];
+const STATUS_OPTIONS = ["all", "under_investigation", "cleared", "solved"];
 const CATEGORY_OPTIONS = ["all", "crime", "non_crime"];
 
 // "all" plus the two IncidentCategory values ("crime"/"non_crime") — same
@@ -42,7 +42,7 @@ export default function IncidentList() {
   // need this.
   const debouncedSearch = useDebouncedValue(search, 350);
 
-  const { data, isLoading } = useListIncidents({
+  const { data, isLoading, isError, refetch } = useListIncidents({
     search: debouncedSearch || undefined,
     status: status || undefined,
     category: category || undefined,
@@ -140,7 +140,14 @@ export default function IncidentList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {isError ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-32 text-center">
+                  <p className="text-destructive mb-3" role="alert">Could not load incidents. Please try again.</p>
+                  <Button variant="outline" size="sm" onClick={() => void refetch()}>Retry</Button>
+                </TableCell>
+              </TableRow>
+            ) : isLoading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <TableRow key={i}>
                   <TableCell colSpan={7} className="h-14 animate-pulse bg-muted/50" />

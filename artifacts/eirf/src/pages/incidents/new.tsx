@@ -1,3 +1,5 @@
+import { CaseStatusHelp } from "@/components/case-status-help";
+import { CASE_STATUSES, getStatusLabel } from "@/lib/incident-status";
 import React from "react";
 import { Link, useLocation } from "wouter";
 import { useForm, Controller } from "react-hook-form";
@@ -33,13 +35,7 @@ const schema = z.object({
   witnessStatements: z.string().optional(),
   evidence: z.string().optional(),
   notes: z.string().optional(),
-  // "settled" is a valid status an officer can file/mark directly. The
-  // server derives settledDate itself (resolveSettledDate() in
-  // artifacts/api-server/src/lib/settledDate.ts stamps "today" the moment
-  // status becomes "settled") — settledDate is intentionally absent from
-  // IncidentInput/IncidentUpdate, so there is no client field to collect or
-  // submit for it here.
-  status: z.enum(['open', 'under_investigation', 'settled', 'closed', 'archived']).default('open'),
+  status: z.enum(CASE_STATUSES).default("under_investigation"),
   // Optional; "unassigned" is represented as null in form state (Radix
   // Select can't hold an empty-string value) and dropped to `undefined`
   // before it reaches IncidentInput, which has no null variant on create.
@@ -70,7 +66,7 @@ export default function NewIncident() {
       witnessStatements: "",
       evidence: "",
       notes: "",
-      status: "open",
+      status: "under_investigation",
       investigatingOfficerId: null,
     }
   });
@@ -269,17 +265,12 @@ export default function NewIncident() {
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger id="status"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="open">Open</SelectItem>
-                        <SelectItem value="under_investigation">Under Investigation</SelectItem>
-                        <SelectItem value="settled">Settled</SelectItem>
-                        <SelectItem value="closed">Closed</SelectItem>
+                        {CASE_STATUSES.map(value => <SelectItem key={value} value={value}>{getStatusLabel(value)}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   )}
                 />
-                {status === "settled" && (
-                  <p className="text-xs text-muted-foreground">Settled date is recorded automatically.</p>
-                )}
+                <CaseStatusHelp />
               </div>
             </div>
 

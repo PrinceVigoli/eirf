@@ -1,10 +1,19 @@
-import { test } from "node:test";
+import test from "node:test";
 import assert from "node:assert/strict";
-import { isAllowedStatusTransition } from "./incidentWorkflow.ts";
+import { CASE_STATUSES, isAllowedStatusTransition } from "./incidentWorkflow.ts";
 
-test("open -> settled allowed", () => assert.equal(isAllowedStatusTransition("open", "settled"), true));
-test("under_investigation -> settled allowed", () => assert.equal(isAllowedStatusTransition("under_investigation", "settled"), true));
-test("settled -> under_investigation allowed (reopen)", () => assert.equal(isAllowedStatusTransition("settled", "under_investigation"), true));
-test("settled -> closed allowed", () => assert.equal(isAllowedStatusTransition("settled", "closed"), true));
-test("settled -> archived NOT allowed (must pass through closed)", () => assert.equal(isAllowedStatusTransition("settled", "archived"), false));
-test("settled -> settled allowed (no-op)", () => assert.equal(isAllowedStatusTransition("settled", "settled"), true));
+for (const current of CASE_STATUSES) {
+  for (const next of CASE_STATUSES) {
+    test(current + " -> " + next + " supports classification and corrections", () => {
+      assert.equal(isAllowedStatusTransition(current, next), true);
+    });
+  }
+}
+for (const legacy of ["open", "settled", "closed", "archived"]) {
+  test(legacy + " remains readable and can be reviewed into a new classification", () => {
+    assert.equal(isAllowedStatusTransition(legacy, legacy), true);
+    for (const next of CASE_STATUSES) assert.equal(isAllowedStatusTransition(legacy, next), true);
+    for (const current of CASE_STATUSES) assert.equal(isAllowedStatusTransition(current, legacy), false);
+  });
+}
+test("unknown status cannot transition", () => assert.equal(isAllowedStatusTransition("unknown", "solved"), false));

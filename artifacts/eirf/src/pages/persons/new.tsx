@@ -1,3 +1,8 @@
+import { PersonCultureFields } from "@/components/person-culture-fields";
+import { PersonLocationFields } from "@/components/person-location-fields";
+import { PersonAgeField } from "@/components/person-age-field";
+import { fullNameFromParts } from "@/lib/person-fields";
+import { useRefreshPersonRecords } from "@/hooks/use-refresh-person-records";
 import React from "react";
 import { Link, useLocation } from "wouter";
 import { useForm, Controller } from "react-hook-form";
@@ -27,6 +32,15 @@ const UNSPECIFIED = "unspecified";
 
 const schema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
+  lastName: z.string().optional(),
+  middleName: z.string().optional(),
+  firstName: z.string().optional(),
+  region: z.string().optional(),
+  province: z.string().optional(),
+  cityMunicipality: z.string().optional(),
+  barangay: z.string().optional(),
+  dialect: z.string().optional(),
+  tribe: z.string().optional(),
   alias: z.string().optional(),
   dateOfBirth: z.string().optional(),
   sex: z.string().optional(),
@@ -46,6 +60,15 @@ type FormData = z.infer<typeof schema>;
 
 const defaultValues: FormData = {
   fullName: "",
+  lastName: "",
+  middleName: "",
+  firstName: "",
+  region: "",
+  province: "",
+  cityMunicipality: "",
+  barangay: "",
+  dialect: "",
+  tribe: "",
   alias: "",
   dateOfBirth: "",
   sex: "",
@@ -64,6 +87,7 @@ export default function NewPerson() {
   const [, setLocation] = useLocation();
   const createPerson = useCreatePerson();
   const { toast } = useToast();
+  const refreshPersonRecords = useRefreshPersonRecords();
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -87,6 +111,7 @@ export default function NewPerson() {
           setLocation("/persons");
           return;
         }
+        void refreshPersonRecords();
         toast({ title: "Person created", description: `${person.fullName} has been added to the registry.` });
         setLocation(`/persons/${person.id}`);
       },
@@ -121,8 +146,22 @@ export default function NewPerson() {
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input id="lastName" {...form.register("lastName", { onChange: () => form.setValue("fullName", fullNameFromParts(form.getValues()), { shouldDirty: true, shouldValidate: true }) })} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="middleName">Middle Name</Label>
+                <Input id="middleName" {...form.register("middleName", { onChange: () => form.setValue("fullName", fullNameFromParts(form.getValues()), { shouldDirty: true, shouldValidate: true }) })} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input id="firstName" {...form.register("firstName", { onChange: () => form.setValue("fullName", fullNameFromParts(form.getValues()), { shouldDirty: true, shouldValidate: true }) })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name *</Label>
-                <Input id="fullName" {...form.register("fullName")} />
+                <Input id="fullName" readOnly={!!fullNameFromParts(form.watch())} {...form.register("fullName")} />
                 {form.formState.errors.fullName && <p className="text-sm text-destructive">{form.formState.errors.fullName.message}</p>}
               </div>
               <div className="space-y-2">
@@ -135,6 +174,7 @@ export default function NewPerson() {
                 <Label htmlFor="dateOfBirth">Date of Birth</Label>
                 <Input type="date" id="dateOfBirth" {...form.register("dateOfBirth")} />
               </div>
+              <PersonAgeField dateOfBirth={form.watch("dateOfBirth")} />
               <div className="space-y-2">
                 <Label htmlFor="sex">Sex</Label>
                 <Controller
@@ -193,10 +233,8 @@ export default function NewPerson() {
             <CardDescription>Address and contact details</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input id="address" {...form.register("address")} />
-            </div>
+            <PersonCultureFields values={form.watch()} onChange={(field, value) => form.setValue(field, value, { shouldDirty: true })} />
+            <PersonLocationFields values={form.watch()} onChange={(field, value) => form.setValue(field, value, { shouldDirty: true })} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="contactNumber">Contact Number</Label>

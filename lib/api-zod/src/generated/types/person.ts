@@ -10,6 +10,24 @@ export interface Person {
   id: number;
   fullName: string;
   /** @nullable */
+  lastName?: string | null;
+  /** @nullable */
+  middleName?: string | null;
+  /** @nullable */
+  firstName?: string | null;
+  /** @nullable */
+  region?: string | null;
+  /** @nullable */
+  province?: string | null;
+  /** @nullable */
+  cityMunicipality?: string | null;
+  /** @nullable */
+  barangay?: string | null;
+  /** @nullable */
+  dialect?: string | null;
+  /** @nullable */
+  tribe?: string | null;
+  /** @nullable */
   alias?: string | null;
   /** @nullable */
   dateOfBirth?: string | null;

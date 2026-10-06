@@ -8,6 +8,15 @@
 
 export interface PersonUpdate {
   fullName?: string;
+  lastName?: string;
+  middleName?: string;
+  firstName?: string;
+  region?: string;
+  province?: string;
+  cityMunicipality?: string;
+  barangay?: string;
+  dialect?: string;
+  tribe?: string;
   alias?: string;
   dateOfBirth?: string;
   sex?: string;
